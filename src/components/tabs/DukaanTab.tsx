@@ -102,7 +102,7 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
               {salesData.total.toLocaleString()}
             </span>
           </div>
-          <p className="text-secondary font-bold text-xl">
+          <p className="text-secondary font-bold text-4xl">
             {salesData.count} {texts.transactions}
           </p>
         </CardContent>
@@ -135,9 +135,9 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
                 <div className="space-y-2">
                   <Progress 
                     value={item.level} 
-                    className="h-4"
-                    indicatorClassName={cn(
-                      item.level < 15 ? "bg-destructive" : item.level < 30 ? "bg-yellow-500" : "bg-secondary"
+                    className={cn(
+                      "h-4",
+                      item.level < 15 ? "bg-destructive/30" : item.level < 30 ? "bg-yellow-500/30" : "bg-secondary/30"
                     )}
                   />
                   <p className="text-[10px] text-muted-foreground text-center font-bold uppercase tracking-tight">
