@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, BookOpen, BarChart3, Lock, Users, Eye, EyeOff, Volume2, X } from "lucide-react";
+import { Home, Package, BarChart3, BookOpen, Lock, Users, Eye, EyeOff, Volume2, X, Mic, Keyboard } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
+import StockTab from "./tabs/StockTab"; // We'll create this or split from Dukaan
 import SeekhaTab from "./tabs/SeekhaTab";
 import ReportTab from "./tabs/ReportTab";
 import CustomerView from "./CustomerView";
 import VoiceButton from "./VoiceButton";
+import { cn } from "@/lib/utils";
 
 interface DashboardProps {
   role: "owner" | "helper";
@@ -15,8 +17,8 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-const SNOOZE_KEY = "dukaansaathi_lesson_snooze";
-const SNOOZE_DURATION = 3600000; // 1 hour
+const SNOOZE_KEY = "bolledger_lesson_snooze";
+const SNOOZE_DURATION = 3600000;
 
 export default function Dashboard({ role, language, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState("dukaan");
@@ -32,19 +34,9 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
 
   const handleLessonGenerated = (lesson: string) => {
     const snoozeTime = localStorage.getItem(SNOOZE_KEY);
-    if (snoozeTime && Date.now() - parseInt(snoozeTime) < SNOOZE_DURATION) {
-      return;
-    }
-
+    if (snoozeTime && Date.now() - parseInt(snoozeTime) < SNOOZE_DURATION) return;
     setCurrentLesson(lesson);
-    setTimeout(() => {
-      setShowLessonCard(true);
-    }, 3000);
-  };
-
-  const handleDismissLesson = () => {
-    localStorage.setItem(SNOOZE_KEY, Date.now().toString());
-    setShowLessonCard(false);
+    setTimeout(() => setShowLessonCard(true), 3000);
   };
 
   const speakLesson = (text: string) => {
@@ -52,7 +44,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.rate = 1.0;
     window.speechSynthesis.speak(utterance);
   };
 
@@ -63,151 +54,137 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const texts = {
     "hi-IN": {
       dukaan: "दुकान",
-      seekha: "सीखा",
+      stock: "स्टॉक",
       report: "रिपोर्ट",
-      newLesson: "नया सबक",
-      listen: "सुनो",
-      later: "बाद में",
-      privateModeOn: "प्राइवेट मोड चालू"
+      seekha: "सीखा",
+      privateModeOn: "प्राइवेट मोड"
     },
     "en-IN": {
       dukaan: "Dukaan",
-      seekha: "Seekha",
+      stock: "Stock",
       report: "Report",
-      newLesson: "NEW LESSON",
-      listen: "Listen",
-      later: "Later",
-      privateModeOn: "Private Mode ON"
+      seekha: "Seekha",
+      privateModeOn: "Private Mode"
     }
   }[language];
 
   return (
-    <div className="flex flex-col h-full bg-background relative overflow-hidden">
-      {/* Header */}
-      <header className="bg-[#0D2240] px-4 py-2 flex items-center justify-between shadow-lg z-20 h-16 shrink-0">
-        <div className="flex items-center gap-1">
-          <span className="text-xl font-black text-white">दुकान साथी 🇮🇳</span>
-        </div>
+    <div className="flex flex-col h-full bg-[#F8FAFC] relative overflow-hidden">
+      {/* Premium Header */}
+      <header className="bg-[#0D2240] px-6 py-4 flex items-center justify-between shadow-2xl z-20 shrink-0 border-b border-white/5">
         <div className="flex items-center gap-2">
+          <div className="text-xl font-black flex items-baseline">
+            <span className="text-[#C45000]">Bol</span>
+            <span className="text-[#1A6B3C]">Ledger</span>
+            <span className="text-white ml-1 text-xs opacity-60">AI 🇮🇳</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
           <button 
-            onClick={() => {
-              setPrivateMode(!privateMode);
-              if (!privateMode) setShowLessonCard(false);
-            }}
-            className={`h-10 w-10 flex items-center justify-center rounded-full transition-all ${privateMode ? 'bg-accent text-white' : 'bg-card/50 text-muted-foreground'}`}
+            onClick={() => setPrivateMode(!privateMode)}
+            className={cn(
+              "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
+              privateMode ? 'bg-[#C45000] text-white' : 'bg-white/5 text-white/40'
+            )}
           >
-            {privateMode ? <EyeOff size={20} /> : <Eye size={20} />}
+            {privateMode ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
           <button 
             onClick={() => setShowCustomerView(true)}
-            className="h-10 w-10 flex items-center justify-center rounded-full bg-card/50 text-muted-foreground"
+            className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40"
           >
-            <Users size={20} />
+            <Users size={18} />
           </button>
           <button 
             onClick={onLogout}
-            className="h-10 w-10 flex items-center justify-center rounded-full bg-card/50 text-muted-foreground"
+            className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40"
           >
-            <Lock size={20} />
+            <Lock size={18} />
           </button>
         </div>
       </header>
 
-      {privateMode && (
-        <div className="bg-accent/20 border-b border-accent/30 py-1.5 px-4 text-center shrink-0">
-          <p className="text-accent-foreground text-[10px] font-bold uppercase tracking-wider">
-            {texts.privateModeOn}
-          </p>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pb-40">
+      {/* Main Scrollable Content */}
+      <main className="flex-1 overflow-y-auto pb-48 pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-          <TabsContent value="dukaan" className="m-0 p-3 animate-in fade-in slide-in-from-right-4">
+          <TabsContent value="dukaan" className="m-0 p-4">
             <DukaanTab privateMode={privateMode} language={language} onTransaction={handleTransaction} />
           </TabsContent>
-          <TabsContent value="seekha" className="m-0 p-3 animate-in fade-in slide-in-from-right-4">
-            <SeekhaTab language={language} />
+          <TabsContent value="stock" className="m-0 p-4">
+            <StockTab language={language} />
           </TabsContent>
-          <TabsContent value="report" className="m-0 p-3 animate-in fade-in slide-in-from-right-4">
+          <TabsContent value="report" className="m-0 p-4">
             <ReportTab role={role} privateMode={privateMode} language={language} />
+          </TabsContent>
+          <TabsContent value="seekha" className="m-0 p-4">
+            <SeekhaTab language={language} />
           </TabsContent>
         </Tabs>
       </main>
 
       {/* Passive Lesson Card */}
       {showLessonCard && !privateMode && !showCustomerView && currentLesson && (
-        <div className="fixed bottom-24 left-3 right-3 bg-card border border-primary/20 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-full duration-500 z-[60] flex items-center gap-4">
-          <div className="text-4xl select-none">📚</div>
-          <div className="flex-1 space-y-2">
-            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
-              {texts.newLesson}
-            </p>
+        <div className="fixed bottom-28 left-4 right-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-full duration-500 z-50 flex items-center gap-4">
+          <div className="text-3xl">📚</div>
+          <div className="flex-1 space-y-3">
+            <p className="text-[10px] font-black text-[#C45000] uppercase tracking-widest">New Lesson</p>
             <div className="flex gap-2">
               <button 
-                onClick={() => {
-                  speakLesson(currentLesson);
-                  setShowLessonCard(false);
-                }}
-                className="bg-secondary text-white h-10 px-4 rounded-xl flex items-center gap-2 font-bold active:scale-95 transition-all text-sm flex-1 justify-center shadow-md"
+                onClick={() => { speakLesson(currentLesson!); setShowLessonCard(false); }}
+                className="bg-[#1A6B3C] text-white h-12 flex-1 rounded-xl flex items-center justify-center gap-2 font-bold text-sm"
               >
-                <Volume2 size={16} />
-                {texts.listen}
+                <Volume2 size={16} /> Listen
               </button>
               <button 
-                onClick={handleDismissLesson}
-                className="bg-muted text-muted-foreground h-10 px-4 rounded-xl flex items-center gap-2 font-bold active:scale-95 transition-all text-sm flex-1 justify-center"
+                onClick={() => setShowLessonCard(false)}
+                className="bg-slate-100 text-slate-500 h-12 w-12 rounded-xl flex items-center justify-center"
               >
-                <X size={16} />
-                {texts.later}
+                <X size={18} />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Voice Button Area */}
-      <div className="fixed bottom-20 left-0 right-0 z-50 flex justify-center pointer-events-none">
-        <div className="pointer-events-auto">
-          <VoiceButton 
-            language={language} 
-            privateMode={privateMode} 
-            onTransactionSuccess={handleTransaction} 
-            onLessonGenerated={handleLessonGenerated}
-          />
+      {/* Fintech Style Bottom Navigation with Integrated Mic */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 pb-safe z-[60] shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+        <div className="flex justify-between items-center max-w-md mx-auto relative h-16">
+          <NavBtn icon={<Home size={22} />} label={texts.dukaan} active={activeTab === 'dukaan'} onClick={() => setActiveTab('dukaan')} />
+          <NavBtn icon={<Package size={22} />} label={texts.stock} active={activeTab === 'stock'} onClick={() => setActiveTab('stock')} />
+          
+          {/* Raised Mic Button */}
+          <div className="relative -top-8 flex flex-col items-center">
+            <VoiceButton 
+              language={language} 
+              privateMode={privateMode} 
+              onTransactionSuccess={handleTransaction} 
+              onLessonGenerated={handleLessonGenerated}
+              compact
+            />
+          </div>
+
+          <NavBtn icon={<BarChart3 size={22} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} disabled={role === 'helper'} />
+          <NavBtn icon={<BookOpen size={22} />} label={texts.seekha} active={activeTab === 'seekha'} onClick={() => setActiveTab('seekha')} />
         </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border px-6 py-2 flex justify-between items-center z-40 pb-safe shadow-lg h-16 shrink-0">
-        <button 
-          onClick={() => setActiveTab("dukaan")}
-          className={`flex flex-col items-center gap-0.5 transition-all ${activeTab === 'dukaan' ? 'text-primary' : 'text-muted-foreground'}`}
-        >
-          <Home size={24} />
-          <span className="text-[10px] font-bold uppercase">{texts.dukaan}</span>
-        </button>
-        
-        <button 
-          onClick={() => setActiveTab("seekha")}
-          className={`flex flex-col items-center gap-0.5 transition-all ${activeTab === 'seekha' ? 'text-primary' : 'text-muted-foreground'}`}
-        >
-          <BookOpen size={24} />
-          <span className="text-[10px] font-bold uppercase">{texts.seekha}</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab("report")}
-          className={`flex flex-col items-center gap-0.5 transition-all ${activeTab === 'report' ? 'text-primary' : 'text-muted-foreground'}`}
-          disabled={role === 'helper'}
-        >
-          <BarChart3 size={24} className={role === 'helper' ? 'opacity-30' : ''} />
-          <span className={`text-[10px] font-bold uppercase ${role === 'helper' ? 'opacity-30' : ''}`}>
-            {texts.report}
-          </span>
-        </button>
       </nav>
     </div>
+  );
+}
+
+function NavBtn({ icon, label, active, onClick, disabled }: { icon: any, label: string, active: boolean, onClick: () => void, disabled?: boolean }) {
+  return (
+    <button 
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "flex flex-col items-center gap-1 min-w-[64px] transition-all",
+        active ? "text-[#C45000]" : "text-slate-400",
+        disabled && "opacity-20"
+      )}
+    >
+      {icon}
+      <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
+      {active && <div className="w-1 h-1 rounded-full bg-[#C45000] mt-0.5" />}
+    </button>
   );
 }

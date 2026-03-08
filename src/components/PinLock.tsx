@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Lock } from "lucide-react";
+import { Mic, BookOpen } from "lucide-react";
 
 interface PinLockProps {
   onAuth: (role: "owner" | "helper") => void;
@@ -16,8 +16,6 @@ const LANGUAGES = [
   { code: "en-IN", label: "🇬🇧 English", active: true },
   { code: "te-IN", label: "తెలుగు", active: false },
   { code: "ta-IN", label: "தமிழ்", active: false },
-  { code: "bn-IN", label: "বাংলা", active: false },
-  { code: "mr-IN", label: "मराठी", active: false },
 ];
 
 export default function PinLock({ onAuth, language, onLanguageChange }: PinLockProps) {
@@ -44,19 +42,15 @@ export default function PinLock({ onAuth, language, onLanguageChange }: PinLockP
     }
   };
 
-  const handleDelete = () => {
-    setPin(pin.slice(0, -1));
-  };
-
   const texts = {
     "hi-IN": {
-      title: "दुकान साथी AI 🇮🇳",
+      tagline: "बोलिये… बाकी सब BolLedger संभालेगा",
       select: "भाषा चुनें",
       enter: "PIN दर्ज करें",
       error: "गलत PIN",
     },
     "en-IN": {
-      title: "DukaanSaathi AI 🇮🇳",
+      tagline: "Speak… BolLedger will handle the rest",
       select: "Select Language",
       enter: "Enter PIN",
       error: "Wrong PIN",
@@ -64,64 +58,67 @@ export default function PinLock({ onAuth, language, onLanguageChange }: PinLockP
   }[language];
 
   return (
-    <div className="flex flex-col items-center justify-between h-full p-4 text-center bg-background overflow-y-auto">
-      <div className="w-full max-w-sm space-y-6 mt-2">
-        <h1 className="text-xl font-black text-white">{texts.title}</h1>
+    <div className="flex flex-col items-center justify-between h-full p-6 text-center bg-[#0D2240] overflow-y-auto">
+      <div className="w-full max-w-sm flex flex-col items-center mt-8">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="relative flex items-center justify-center h-12 w-12 bg-white/10 rounded-xl overflow-hidden backdrop-blur-md border border-white/20">
+            <Mic size={20} className="text-[#C45000] absolute -translate-x-1.5" />
+            <BookOpen size={20} className="text-[#1A6B3C] absolute translate-x-1.5" />
+          </div>
+          <div className="text-3xl font-black tracking-tight flex items-baseline">
+            <span className="text-[#C45000]">Bol</span>
+            <span className="text-[#1A6B3C]">Ledger</span>
+            <span className="text-white ml-1 text-base">AI 🇮🇳</span>
+          </div>
+        </div>
+        <p className="text-white/60 text-xs font-medium italic mb-10">{texts.tagline}</p>
         
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold">{texts.select}</p>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="w-full space-y-4 mb-8">
+          <p className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold">{texts.select}</p>
+          <div className="grid grid-cols-2 gap-3">
             {LANGUAGES.map((lang) => (
               <button
                 key={lang.code}
                 disabled={!lang.active}
                 onClick={() => lang.active && onLanguageChange(lang.code as any)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center h-14 rounded-xl border transition-all",
+                  "relative flex flex-col items-center justify-center h-16 rounded-2xl border transition-all",
                   language === lang.code 
-                    ? "border-primary bg-primary/10 scale-105 z-10" 
-                    : "border-border bg-card/50",
-                  !lang.active && "opacity-50 grayscale cursor-not-allowed"
+                    ? "border-[#C45000] bg-[#C45000]/10 ring-1 ring-[#C45000]" 
+                    : "border-white/10 bg-white/5",
+                  !lang.active && "opacity-30 grayscale cursor-not-allowed"
                 )}
               >
                 <span className="text-lg leading-none">{lang.label.split(' ')[0]}</span>
-                <span className="text-[10px] font-bold">{lang.label.split(' ')[1]}</span>
-                {!lang.active && (
-                  <Badge variant="secondary" className="absolute -top-1 -right-1 scale-75 whitespace-nowrap bg-muted text-[8px] px-1 h-3">
-                    Soon
-                  </Badge>
-                )}
+                <span className="text-[10px] font-bold text-white/80">{lang.label.split(' ')[1]}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-xs space-y-6 my-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-12 w-12 bg-card rounded-full shadow-inner border border-border flex items-center justify-center">
-            <Lock className={cn("w-6 h-6", error ? "text-destructive animate-shake" : "text-primary")} />
-          </div>
-          <div className="flex gap-3">
+      <div className="w-full max-w-xs space-y-10 mb-6">
+        <div className="flex flex-col items-center gap-6">
+          <div className="flex gap-4">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
                 className={cn(
-                  "w-3 h-3 rounded-full border transition-all duration-300",
-                  pin.length > i ? "bg-primary border-primary scale-110" : "border-border"
+                  "w-4 h-4 rounded-full border-2 transition-all duration-300",
+                  pin.length > i ? "bg-[#C45000] border-[#C45000] scale-125" : "border-white/20"
                 )}
               />
             ))}
           </div>
-          {error && <p className="text-destructive text-sm font-bold uppercase">{texts.error}</p>}
+          {error && <p className="text-destructive text-sm font-bold uppercase tracking-wider">{texts.error}</p>}
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
             <button
               key={n}
               onClick={() => handleDigit(n.toString())}
-              className="h-14 w-14 rounded-full bg-card active:bg-primary transition-all text-xl font-bold flex items-center justify-center border border-border mx-auto"
+              className="h-16 w-16 rounded-full bg-white/5 active:bg-[#C45000] transition-all text-2xl font-bold flex items-center justify-center border border-white/10 text-white mx-auto"
             >
               {n}
             </button>
@@ -129,13 +126,13 @@ export default function PinLock({ onAuth, language, onLanguageChange }: PinLockP
           <div />
           <button
             onClick={() => handleDigit("0")}
-            className="h-14 w-14 rounded-full bg-card active:bg-primary transition-all text-xl font-bold flex items-center justify-center border border-border mx-auto"
+            className="h-16 w-16 rounded-full bg-white/5 active:bg-[#C45000] transition-all text-2xl font-bold flex items-center justify-center border border-white/10 text-white mx-auto"
           >
             0
           </button>
           <button
-            onClick={handleDelete}
-            className="h-14 w-14 rounded-full bg-card/50 flex items-center justify-center text-muted-foreground mx-auto"
+            onClick={() => setPin(pin.slice(0, -1))}
+            className="h-16 w-16 rounded-full flex items-center justify-center text-white/40 mx-auto"
           >
             ⌫
           </button>

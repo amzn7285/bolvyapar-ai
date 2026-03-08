@@ -2,8 +2,8 @@ import type {Metadata} from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'DukaanSaathi AI (दुकान साथी)',
-  description: 'Your voice-first AI business partner for Indian kirana shopkeepers.',
+  title: 'BolLedger AI (बोल लेजर)',
+  description: 'Boliye… Baaki Sab BolLedger Sambhalega. Your voice-first AI business partner.',
 };
 
 export default function RootLayout({

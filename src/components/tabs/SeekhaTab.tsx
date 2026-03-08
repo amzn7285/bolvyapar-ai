@@ -9,69 +9,46 @@ interface SeekhaTabProps {
 }
 
 const LESSONS = [
-  { id: 'data', emoji: '📊', title: 'DATA', story: '📈 📱 🛒', unlocked: true, color: 'bg-blue-500' },
-  { id: 'faida', emoji: '💰', title: 'FAIDA', story: '📉 ➡️ 📈', unlocked: true, color: 'bg-green-500' },
-  { id: 'andaaza', emoji: '🔮', title: 'ANDAAZA', story: '📅 🥛 🛒', unlocked: false, color: 'bg-purple-500' },
-  { id: 'ai-wale', emoji: '🤖', title: 'AI WALE!', story: '✨ 🧠 ⚡', unlocked: false, color: 'bg-saffron-500' },
+  { id: 'data', emoji: '📊', title: 'DATA POWER', story: '📈 📱 🛒', unlocked: true },
+  { id: 'faida', emoji: '💰', title: 'FAIDA FOCUS', story: '📉 ➡️ 📈', unlocked: true },
+  { id: 'andaaza', emoji: '🔮', title: 'FUTURE VIEW', story: '📅 🥛 🛒', unlocked: false },
 ];
 
 export default function SeekhaTab({ language }: SeekhaTabProps) {
-  const speak = (id: string, type: 'lesson' | 'ai') => {
-    const text = type === 'lesson' 
-      ? (language === 'hi-IN' ? "डाटा का मतलब है आपकी दुकान की पूरी जानकारी।" : "Data means all information about your shop.")
-      : (language === 'hi-IN' ? "एआई ने आपके पिछले 100 बिलों को देखकर यह बताया है।" : "AI analyzed your last 100 bills to find this.");
+  const speak = (type: 'lesson' | 'ai') => {
+    const text = type === 'lesson' ? "Data is the key to your business." : "AI analyzed your last 100 sales.";
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
     window.speechSynthesis.speak(utterance);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-1.5 justify-center mb-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div 
-            key={i} 
-            className={cn("w-2 h-2 rounded-full", i <= 2 ? "bg-primary" : "bg-muted")} 
-          />
-        ))}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center px-1">
+        <h3 className="text-slate-900 text-lg font-black tracking-tight">Seekha Hua</h3>
+        <p className="text-[10px] font-bold text-[#1A6B3C] uppercase bg-[#1A6B3C]/10 px-3 py-1 rounded-full">2/4 Unlocked</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-6">
         {LESSONS.map((lesson) => (
-          <Card 
-            key={lesson.id} 
-            className={cn(
-              "overflow-hidden rounded-2xl border-none shadow-md relative",
-              lesson.unlocked ? "bg-card" : "bg-card/20 grayscale opacity-50"
-            )}
-          >
-            <CardContent className="p-0">
-              {!lesson.unlocked && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                  <Lock size={32} className="text-white/50" />
+          <Card key={lesson.id} className={cn("overflow-hidden rounded-[32px] border-none shadow-sm relative transition-all", lesson.unlocked ? "bg-white" : "bg-slate-100 grayscale")}>
+            <CardContent className="p-8">
+              {!lesson.unlocked && <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 backdrop-blur-[2px]"><Lock size={40} className="text-slate-300" /></div>}
+              <div className="flex flex-col items-center text-center space-y-6">
+                <span className="text-6xl">{lesson.emoji}</span>
+                <div className="space-y-1">
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">{lesson.title}</h2>
+                  <div className="text-2xl tracking-[0.5em] font-black text-slate-200">{lesson.story}</div>
                 </div>
-              )}
-              
-              <div className="p-6 flex flex-col items-center text-center space-y-4">
-                <span className="text-5xl">{lesson.emoji}</span>
-                <h2 className="text-2xl font-black tracking-tight text-white">{lesson.title}</h2>
-                <div className="text-lg tracking-widest font-black opacity-80">{lesson.story}</div>
-                
                 {lesson.unlocked && (
-                  <div className="grid grid-cols-2 gap-2 w-full pt-2">
-                    <button 
-                      onClick={() => speak(lesson.id, 'lesson')}
-                      className="flex flex-col items-center justify-center gap-1 bg-secondary h-12 rounded-xl active:scale-95 transition-all shadow-md"
-                    >
-                      <Volume2 size={20} />
-                      <span className="text-[8px] font-bold uppercase">{language === 'hi-IN' ? 'सुनो' : 'Suno'}</span>
+                  <div className="grid grid-cols-2 gap-3 w-full">
+                    <button onClick={() => speak('lesson')} className="flex flex-col items-center justify-center gap-1 bg-slate-50 h-16 rounded-2xl border border-slate-100 active:bg-slate-100">
+                      <Volume2 size={24} className="text-[#1A6B3C]" />
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Suno</span>
                     </button>
-                    <button 
-                      onClick={() => speak(lesson.id, 'ai')}
-                      className="flex flex-col items-center justify-center gap-1 bg-primary h-12 rounded-xl active:scale-95 transition-all shadow-md"
-                    >
-                      <Bot size={20} />
-                      <span className="text-[8px] font-bold uppercase">{language === 'hi-IN' ? 'एआई क्या?' : 'AI Why?'}</span>
+                    <button onClick={() => speak('ai')} className="flex flex-col items-center justify-center gap-1 bg-slate-50 h-16 rounded-2xl border border-slate-100 active:bg-slate-100">
+                      <Bot size={24} className="text-[#C45000]" />
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">AI Why?</span>
                     </button>
                   </div>
                 )}
