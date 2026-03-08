@@ -37,7 +37,7 @@ export default function SeekhaTab({ language }: SeekhaTabProps) {
               <div className="flex flex-col items-center text-center space-y-6">
                 <span className="text-6xl">{lesson.emoji}</span>
                 <div className="space-y-1">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">{lesson.title}</h2>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">{lesson.title}</h2>
                   <div className="text-2xl tracking-[0.5em] font-black text-slate-200">{lesson.story}</div>
                 </div>
                 {lesson.unlocked && (

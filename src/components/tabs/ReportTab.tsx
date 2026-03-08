@@ -31,14 +31,14 @@ export default function ReportTab({ language, privateMode }: ReportTabProps) {
 
   const texts = {
     "hi-IN": {
-      title: "रिपोर्ट लॉक",
-      enter: "मालिक का PIN",
-      revenue: "हफ्ते की कमाई",
+      title: "रिपोर्ट सुरक्षित",
+      enter: "मालिक का PIN दर्ज करें",
+      revenue: "हफ्ते की कुल कमाई",
       bestProduct: "टॉप प्रोडक्ट",
       margin: "मुनाफा",
       insights: "AI एनालिसिस",
-      whatsapp: "Share Summary",
-      lock: "Lock"
+      whatsapp: "शेयर समरी",
+      lock: "लॉक करें"
     },
     "en-IN": {
       title: "Reports Secure",
@@ -54,26 +54,26 @@ export default function ReportTab({ language, privateMode }: ReportTabProps) {
 
   if (isLocked) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60svh] space-y-8 animate-in fade-in zoom-in-95 px-4">
+      <div className="flex flex-col items-center justify-center min-h-[50svh] space-y-8 animate-in fade-in zoom-in-95 px-4">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="p-5 bg-white rounded-[24px] shadow-xl border border-slate-100">
+          <div className="p-6 bg-white rounded-[24px] shadow-xl border border-slate-100">
             <Lock className={cn("w-10 h-10", error ? "text-destructive" : "text-[#0D2240]")} />
           </div>
           <div className="space-y-1">
-            <h2 className="text-xl font-black text-slate-900">{texts.title}</h2>
+            <h2 className="text-lg font-black text-slate-900">{texts.title}</h2>
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{texts.enter}</p>
           </div>
         </div>
         <div className="flex gap-4">
-          {[0, 1, 2, 3].map(i => <div key={i} className={cn("w-4 h-4 rounded-full border-2", pin.length > i ? "bg-[#C45000] border-[#C45000]" : "border-slate-200")} />)}
+          {[0, 1, 2, 3].map(i => <div key={i} className={cn("w-4 h-4 rounded-full border-2 transition-all", pin.length > i ? "bg-[#C45000] border-[#C45000]" : "border-slate-200")} />)}
         </div>
-        <div className="grid grid-cols-3 gap-5 w-full max-w-[280px]">
+        <div className="grid grid-cols-3 gap-4 w-full max-w-[260px]">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-            <button key={n} onClick={() => handlePinDigit(n.toString())} className="h-16 w-16 rounded-2xl bg-white shadow-sm border border-slate-100 text-xl font-bold flex items-center justify-center text-slate-800 active:bg-slate-100">{n}</button>
+            <button key={n} onClick={() => handlePinDigit(n.toString())} className="h-14 w-14 rounded-2xl bg-white shadow-sm border border-slate-100 text-xl font-bold flex items-center justify-center text-slate-800 active:bg-slate-100">{n}</button>
           ))}
           <div />
-          <button onClick={() => handlePinDigit("0")} className="h-16 w-16 rounded-2xl bg-white shadow-sm border border-slate-100 text-xl font-bold flex items-center justify-center text-slate-800 active:bg-slate-100">0</button>
-          <button onClick={() => setPin(pin.slice(0, -1))} className="h-16 w-16 flex items-center justify-center text-slate-300 font-bold">⌫</button>
+          <button onClick={() => handlePinDigit("0")} className="h-14 w-14 rounded-2xl bg-white shadow-sm border border-slate-100 text-xl font-bold flex items-center justify-center text-slate-800 active:bg-slate-100">0</button>
+          <button onClick={() => setPin(pin.slice(0, -1))} className="h-14 w-14 flex items-center justify-center text-slate-300 font-bold">⌫</button>
         </div>
       </div>
     );
@@ -92,7 +92,7 @@ export default function ReportTab({ language, privateMode }: ReportTabProps) {
         <CardContent className="p-8 relative">
           <TrendingUp size={80} className="absolute right-[-10px] bottom-[-10px] text-white/5" />
           <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">{texts.revenue}</p>
-          <p className={cn("text-[32px] font-black text-white", privateMode && "blur-xl")}>₹24,500</p>
+          <p className={cn("text-[26px] font-black text-white", privateMode && "blur-xl")}>₹24,500</p>
         </CardContent>
       </Card>
 

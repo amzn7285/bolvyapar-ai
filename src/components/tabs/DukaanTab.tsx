@@ -8,7 +8,6 @@ import { Eye, TrendingUp } from "lucide-react";
 interface DukaanTabProps {
   privateMode: boolean;
   language: "hi-IN" | "en-IN";
-  onTransaction?: (t: any) => void;
 }
 
 export default function DukaanTab({ privateMode, language }: DukaanTabProps) {

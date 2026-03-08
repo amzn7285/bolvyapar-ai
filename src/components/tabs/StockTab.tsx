@@ -28,7 +28,7 @@ export default function StockTab({ language }: StockTabProps) {
       <h3 className="text-slate-900 text-lg font-black tracking-tight mb-4 px-1">Inventory Status</h3>
       <div className="grid grid-cols-1 gap-4">
         {stock.map((item) => (
-          <Card key={item.id} className="bg-white border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+          <Card key={item.id} className="bg-white border-slate-100 rounded-[24px] overflow-hidden shadow-sm">
             <CardContent className="p-5">
               <div className="flex justify-between items-center mb-4">
                 <div className="flex gap-4 items-center">
@@ -46,8 +46,8 @@ export default function StockTab({ language }: StockTabProps) {
                 </button>
               </div>
               <div className="space-y-2">
-                <Progress value={item.level} className="h-2.5 rounded-full" />
-                <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase">
+                <Progress value={item.level} className="h-2 rounded-full" />
+                <div className="flex justify-between text-[9px] font-black text-slate-300 uppercase tracking-widest">
                   <span>Critical</span>
                   <span>Healthy</span>
                 </div>

@@ -27,7 +27,10 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.lang = language;
-        recognition.onresult = (e: any) => processQuery(e.results[0][0].transcript);
+        recognition.onresult = (e: any) => {
+          const query = e.results[0][0].transcript;
+          processQuery(query);
+        };
         recognition.onend = () => setIsListening(false);
         recognitionRef.current = recognition;
       }
@@ -44,7 +47,7 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
 
   const startListening = () => {
     if (isListening || isProcessing) return;
-    speak(language === "hi-IN" ? "बोलिए" : "Go ahead");
+    speak(language === "hi-IN" ? "बोलिए" : "Boliye");
     setIsListening(true);
     try {
       recognitionRef.current?.start();
@@ -58,21 +61,30 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
     if (!query.trim()) return;
     setIsProcessing(true);
     try {
-      const systemPrompt = `You are BolLedger AI. Task: Parse sale transaction. Respond ONLY with JSON: {"reply": "warm voice confirmation", "lesson": "2-sentence business tip", "product": "item name"}. Mode: ${privateMode ? 'Private' : 'Normal'}. Language: ${language}`;
+      const systemPrompt = `You are BolLedger AI. Task: Parse the user's voice sale transaction query into structured JSON. 
+Output format: {"reply": "A warm voice confirmation", "lesson": "A short business lesson", "product": "Extracted product name", "price": number}. 
+Privacy: Never mention the exact profit margin aloud.
+Mode: ${privateMode ? 'Private' : 'Normal'}. Language: ${language}.`;
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userMessage: query, systemPrompt }),
       });
       const data = await response.json();
-      const parsed = JSON.parse(data.choices[0].message.content.replace(/```json/g, '').replace(/```/g, '').trim());
+      const content = data.choices[0].message.content;
+      const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanContent);
+      
       speak(parsed.reply);
-      onTransactionSuccess({ productName: parsed.product || query, amount: 0 });
+      onTransactionSuccess({ productName: parsed.product || query, price: parsed.price || 0 });
       if (parsed.lesson) onLessonGenerated(parsed.lesson);
+      
       setTextQuery("");
       setShowTextInput(false);
     } catch (err) {
-      speak(language === "hi-IN" ? "माफ कीजिये, कुछ गड़बड़ हो गई।" : "Sorry, error.");
+      console.error(err);
+      speak(language === "hi-IN" ? "माफ कीजिये, कुछ गड़बड़ हो गई।" : "Sorry, an error occurred.");
     } finally {
       setIsProcessing(false);
     }
@@ -81,20 +93,20 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
   if (showTextInput) {
     return (
       <div className="fixed inset-x-0 bottom-24 px-4 z-[70] animate-in slide-in-from-bottom-4">
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-2xl space-y-3">
+        <div className="bg-white border border-slate-200 p-4 rounded-[24px] shadow-2xl space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-xs font-bold text-[#C45000] uppercase tracking-wider">Type Sale</h3>
-            <button onClick={() => setShowTextInput(false)} className="text-slate-400"><X size={20} /></button>
+            <h3 className="text-[10px] font-black text-[#C45000] uppercase tracking-[0.2em]">Manual Entry</h3>
+            <button onClick={() => setShowTextInput(false)} className="text-slate-400 p-2"><X size={20} /></button>
           </div>
           <Input 
             value={textQuery} 
             onChange={e => setTextQuery(e.target.value)} 
-            placeholder="5kg atta becha..." 
-            className="h-12 text-sm border-slate-100 rounded-xl" 
+            placeholder={language === 'hi-IN' ? "जैसे: 5 किलो आटा बेचा..." : "e.g. Sold 5kg flour..."}
+            className="h-16 text-sm border-slate-100 rounded-2xl bg-slate-50" 
             autoFocus 
           />
-          <Button onClick={() => processQuery(textQuery)} disabled={isProcessing || !textQuery.trim()} className="w-full h-12 rounded-xl bg-[#C45000]">
-            {isProcessing ? <Loader2 className="animate-spin" /> : <Send size={18} />}
+          <Button onClick={() => processQuery(textQuery)} disabled={isProcessing || !textQuery.trim()} className="w-full h-16 rounded-2xl bg-[#C45000] text-white font-bold">
+            {isProcessing ? <Loader2 className="animate-spin" /> : <Send size={20} />}
           </Button>
         </div>
       </div>
@@ -122,7 +134,7 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
         </button>
       </div>
       <p className="mt-1 text-[10px] font-black text-[#C45000] uppercase tracking-tighter">
-        {isListening ? "Listening..." : "BolLedger"}
+        {isListening ? "Sun Rahe Hai..." : "BolLedger"}
       </p>
     </div>
   );

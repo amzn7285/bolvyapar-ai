@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, BookOpen, Lock, Users, Eye, EyeOff, Volume2, X, Mic, Keyboard } from "lucide-react";
+import { Home, Package, BarChart3, BookOpen, Lock, Users, Eye, EyeOff, Volume2, X } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
-import StockTab from "./tabs/StockTab"; // We'll create this or split from Dukaan
+import StockTab from "./tabs/StockTab";
 import SeekhaTab from "./tabs/SeekhaTab";
 import ReportTab from "./tabs/ReportTab";
 import CustomerView from "./CustomerView";
@@ -57,26 +57,24 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       stock: "स्टॉक",
       report: "रिपोर्ट",
       seekha: "सीखा",
-      privateModeOn: "प्राइवेट मोड"
     },
     "en-IN": {
       dukaan: "Dukaan",
       stock: "Stock",
       report: "Report",
       seekha: "Seekha",
-      privateModeOn: "Private Mode"
     }
   }[language];
 
   return (
     <div className="flex flex-col h-full bg-[#F8FAFC] relative overflow-hidden">
-      {/* Premium Header */}
+      {/* Professional Fintech Header */}
       <header className="bg-[#0D2240] px-6 py-4 flex items-center justify-between shadow-2xl z-20 shrink-0 border-b border-white/5">
         <div className="flex items-center gap-2">
           <div className="text-xl font-black flex items-baseline">
             <span className="text-[#C45000]">Bol</span>
             <span className="text-[#1A6B3C]">Ledger</span>
-            <span className="text-white ml-1 text-xs opacity-60">AI 🇮🇳</span>
+            <span className="text-white ml-1 text-[10px] opacity-60">AI 🇮🇳</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -104,11 +102,11 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
         </div>
       </header>
 
-      {/* Main Scrollable Content */}
+      {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto pb-48 pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
           <TabsContent value="dukaan" className="m-0 p-4">
-            <DukaanTab privateMode={privateMode} language={language} onTransaction={handleTransaction} />
+            <DukaanTab privateMode={privateMode} language={language} />
           </TabsContent>
           <TabsContent value="stock" className="m-0 p-4">
             <StockTab language={language} />
@@ -133,7 +131,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
                 onClick={() => { speakLesson(currentLesson!); setShowLessonCard(false); }}
                 className="bg-[#1A6B3C] text-white h-12 flex-1 rounded-xl flex items-center justify-center gap-2 font-bold text-sm"
               >
-                <Volume2 size={16} /> Listen
+                <Volume2 size={16} /> Suniye
               </button>
               <button 
                 onClick={() => setShowLessonCard(false)}
@@ -182,7 +180,7 @@ function NavBtn({ icon, label, active, onClick, disabled }: { icon: any, label: 
         disabled && "opacity-20"
       )}
     >
-      {icon}
+      <div className={cn("transition-transform", active && "scale-110")}>{icon}</div>
       <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
       {active && <div className="w-1 h-1 rounded-full bg-[#C45000] mt-0.5" />}
     </button>
