@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Volume2, Eye } from "lucide-react";
+import { Volume2, Eye, EyeOff } from "lucide-react";
 
 interface DukaanTabProps {
   privateMode: boolean;
@@ -15,15 +14,18 @@ interface DukaanTabProps {
 
 export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
   const [salesData] = useState({ total: 1450, count: 12 });
+  const [revealedSales, setRevealedSales] = useState<Set<number>>(new Set());
+  
   const [stock] = useState([
     { id: 'grains', emoji: '🌾', name: language === 'hi-IN' ? 'अनाज' : 'Grains', qty: 25, unit: language === 'hi-IN' ? 'किलो' : 'kg', level: 80 },
     { id: 'dairy', emoji: '🥛', name: language === 'hi-IN' ? 'डेयरी' : 'Dairy', qty: 15, unit: language === 'hi-IN' ? 'लीटर' : 'L', level: 25 },
     { id: 'essentials', emoji: '🧼', name: language === 'hi-IN' ? 'ज़रूरी सामान' : 'Essentials', qty: 30, unit: language === 'hi-IN' ? 'यूनिट' : 'units', level: 12 },
   ]);
+  
   const [recentSales] = useState([
-    { id: 1, item: language === 'hi-IN' ? 'आटा' : 'Aata', qty: '5kg', customer: 'Rahul', time: '2m ago', amount: 240, revealed: false },
-    { id: 2, item: language === 'hi-IN' ? 'दूध' : 'Milk', qty: '2L', customer: 'Sita', time: '15m ago', amount: 120, revealed: false },
-    { id: 3, item: language === 'hi-IN' ? 'साबुन' : 'Soap', qty: '3 units', customer: 'Amit', time: '1h ago', amount: 300, revealed: false },
+    { id: 1, item: language === 'hi-IN' ? 'आटा' : 'Aata', qty: '5kg', customer: 'Rahul', time: '2m ago', amount: 240 },
+    { id: 2, item: language === 'hi-IN' ? 'दूध' : 'Milk', qty: '2L', customer: 'Sita', time: '15m ago', amount: 120 },
+    { id: 3, item: language === 'hi-IN' ? 'साबुन' : 'Soap', qty: '3 units', customer: 'Amit', time: '1h ago', amount: 300 },
   ]);
 
   const texts = {
@@ -33,7 +35,8 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
       recentSales: "हाल की बिक्री",
       transactions: "लेन-देन",
       itemsLow: "चीजें कम हैं!",
-      reveal: "देखें",
+      reveal: "👁️ टैप करें",
+      revealNote: "कीमतें छिपी हुई हैं — देखने के लिए टैप करें",
       profitHint: "📊 मुनाफे की जानकारी रिपोर्ट टैब में है 🔐"
     },
     "en-IN": {
@@ -42,10 +45,23 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
       recentSales: "Recent Sales",
       transactions: "transactions",
       itemsLow: "items low!",
-      reveal: "Reveal",
+      reveal: "👁️ Tap",
+      revealNote: "Amounts hidden — tap any sale to reveal",
       profitHint: "📊 Profit details in Report tab only 🔐"
     }
   }[language];
+
+  const toggleSaleReveal = (id: number) => {
+    setRevealedSales(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const speakStock = (item: any) => {
     const text = language === 'hi-IN' 
@@ -79,7 +95,7 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
           </p>
           <div className="flex items-baseline gap-2 mb-4">
             <span className="text-xl font-bold text-primary">₹</span>
-            <span className={cn("text-5xl font-bold tracking-tighter", privateMode && "blur-xl")}>
+            <span className={cn("text-5xl font-bold tracking-tighter transition-all duration-300", privateMode && "blur-xl")}>
               {salesData.total.toLocaleString()}
             </span>
           </div>
@@ -133,14 +149,24 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
 
       {/* Recent Sales */}
       <div className="space-y-4">
-        <h3 className="text-muted-foreground text-xs uppercase font-bold tracking-wider px-1">
-          {texts.recentSales}
-        </h3>
+        <div className="flex flex-col gap-1 px-1">
+          <h3 className="text-muted-foreground text-xs uppercase font-bold tracking-wider">
+            {texts.recentSales}
+          </h3>
+          <p className="text-[10px] text-primary/70 font-bold uppercase tracking-tight">
+            ℹ️ {texts.revealNote}
+          </p>
+        </div>
+        
         <div className="space-y-3">
           {recentSales.map((sale) => (
-            <div key={sale.id} className="bg-card/30 border border-border p-4 rounded-2xl flex items-center justify-between">
+            <div 
+              key={sale.id} 
+              onClick={() => toggleSaleReveal(sale.id)}
+              className="bg-card/30 border border-border p-4 rounded-2xl flex items-center justify-between active:bg-card/50 transition-all cursor-pointer group"
+            >
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-2xl">
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-2xl group-active:scale-95 transition-transform">
                   {sale.item.includes('आटा') || sale.item === 'Aata' ? '🌾' : sale.item.includes('दूध') || sale.item === 'Milk' ? '🥛' : '🧼'}
                 </div>
                 <div>
@@ -149,10 +175,12 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                {!privateMode ? (
-                  <span className="text-2xl font-bold text-primary">₹{sale.amount}</span>
+                {revealedSales.has(sale.id) ? (
+                  <span className="text-2xl font-bold text-primary animate-in zoom-in-95 duration-200">
+                    ₹{sale.amount}
+                  </span>
                 ) : (
-                  <div className="flex items-center gap-1 py-2 px-3 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider text-muted-foreground opacity-50">
+                  <div className="flex items-center gap-1 py-2 px-3 bg-primary/10 rounded-full text-[10px] font-bold uppercase tracking-wider text-primary group-hover:bg-primary/20 transition-colors">
                     <Eye size={14} /> {texts.reveal}
                   </div>
                 )}
