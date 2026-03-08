@@ -30,24 +30,24 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
 
   const texts = {
     "hi-IN": {
-      todaySales: "आज की बिक्री (Aaj ki Bikri)",
-      stockStatus: "स्टॉक की स्थिति (Stock Status)",
-      recentSales: "हाल की बिक्री (Recent Sales)",
+      todaySales: "आज की बिक्री",
+      stockStatus: "स्टॉक की स्थिति",
+      recentSales: "हाल की बिक्री",
       transactions: "लेन-देन",
-      itemsLow: "चीजें कम हैं!",
-      reveal: "👁️ टैप करें",
-      revealNote: "कीमतें छिपी हुई हैं — देखने के लिए टैप करें",
-      profitHint: "📊 मुनाफे की जानकारी रिपोर्ट टैब में है 🔐"
+      itemsLow: "सामान कम है!",
+      reveal: "👁️ टैप",
+      revealNote: "कीमतें छिपी हैं — देखने के लिए टैप करें",
+      profitHint: "📊 मुनाफा रिपोर्ट में है 🔐"
     },
     "en-IN": {
       todaySales: "Today's Sales",
       stockStatus: "Stock Status",
       recentSales: "Recent Sales",
-      transactions: "transactions",
+      transactions: "txns",
       itemsLow: "items low!",
       reveal: "👁️ Tap",
-      revealNote: "Amounts hidden — tap any sale to reveal",
-      profitHint: "📊 Profit details in Report tab only 🔐"
+      revealNote: "Amounts hidden — tap sale to reveal",
+      profitHint: "📊 Profit in Report 🔐"
     }
   }[language];
 
@@ -75,72 +75,66 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
   const lowStockCount = stock.filter(s => s.level < 30).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {lowStockCount > 0 && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-center justify-between animate-pulse min-h-[64px]">
-          <p className="text-destructive font-bold text-2xl">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 flex items-center justify-between animate-pulse">
+          <p className="text-destructive font-bold text-sm">
             ⚠️ {lowStockCount} {texts.itemsLow}
           </p>
           <button 
             onClick={() => speakStock(stock.find(s => s.level < 30))} 
-            className="h-16 w-16 flex items-center justify-center text-destructive bg-destructive/10 rounded-full"
+            className="h-8 w-8 flex items-center justify-center text-destructive bg-destructive/10 rounded-full"
           >
-            <Volume2 size={32} />
+            <Volume2 size={16} />
           </button>
         </div>
       )}
 
       {/* Today's Sales Card */}
-      <Card className="bg-gradient-to-br from-primary/20 to-secondary/20 border-none overflow-hidden rounded-3xl shadow-2xl">
-        <CardContent className="p-8">
-          <p className="text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">
+      <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-none overflow-hidden rounded-2xl shadow-md">
+        <CardContent className="p-4">
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-1">
             {texts.todaySales}
           </p>
-          <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-4xl font-bold text-primary">₹</span>
-            <span className={cn("text-6xl font-black tracking-tighter transition-all duration-300", privateMode && "blur-xl")}>
+          <div className="flex items-baseline gap-1 mb-1">
+            <span className="text-lg font-bold text-primary">₹</span>
+            <span className={cn("text-3xl font-black transition-all duration-300", privateMode && "blur-lg")}>
               {salesData.total.toLocaleString()}
             </span>
           </div>
-          <p className="text-secondary font-bold text-4xl">
+          <p className="text-secondary font-bold text-sm">
             {salesData.count} {texts.transactions}
           </p>
         </CardContent>
       </Card>
 
       {/* Stock Cards */}
-      <div className="space-y-4">
-        <h3 className="text-muted-foreground text-xs uppercase font-bold tracking-wider px-1">
+      <div className="space-y-3">
+        <h3 className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider px-1">
           {texts.stockStatus}
         </h3>
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-2">
           {stock.map((item) => (
-            <Card key={item.id} className="bg-card border-border overflow-hidden rounded-2xl">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex gap-4 items-center">
-                    <span className="text-6xl">{item.emoji}</span>
+            <Card key={item.id} className="bg-card border-border overflow-hidden rounded-xl">
+              <CardContent className="p-3">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex gap-3 items-center">
+                    <span className="text-3xl">{item.emoji}</span>
                     <div>
-                      <h3 className="text-muted-foreground text-xs uppercase font-bold">{item.name}</h3>
-                      <p className="text-4xl font-black">{item.qty}<span className="text-xl ml-1 font-normal opacity-60">{item.unit}</span></p>
+                      <h3 className="text-muted-foreground text-[10px] uppercase font-bold">{item.name}</h3>
+                      <p className="text-2xl font-black">{item.qty}<span className="text-xs ml-0.5 font-normal opacity-60">{item.unit}</span></p>
                     </div>
                   </div>
                   <button 
                     onClick={() => speakStock(item)}
-                    className="h-16 w-16 flex items-center justify-center bg-secondary/10 rounded-full text-secondary hover:bg-secondary/20 active:scale-90 transition-all"
+                    className="h-8 w-8 flex items-center justify-center bg-secondary/10 rounded-full text-secondary"
                   >
-                    <Volume2 size={32} />
+                    <Volume2 size={16} />
                   </button>
                 </div>
-                <div className="space-y-2">
-                  <Progress 
-                    value={item.level} 
-                    className={cn(
-                      "h-4",
-                      item.level < 15 ? "bg-destructive/30" : item.level < 30 ? "bg-yellow-500/30" : "bg-secondary/30"
-                    )}
-                  />
-                  <p className="text-[10px] text-muted-foreground text-center font-bold uppercase tracking-tight">
+                <div className="space-y-1">
+                  <Progress value={item.level} className="h-2" />
+                  <p className="text-[8px] text-muted-foreground text-center font-bold uppercase">
                     {texts.profitHint}
                   </p>
                 </div>
@@ -151,41 +145,40 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
       </div>
 
       {/* Recent Sales */}
-      <div className="space-y-4">
-        <div className="flex flex-col gap-1 px-1">
-          <h3 className="text-muted-foreground text-xs uppercase font-bold tracking-wider">
+      <div className="space-y-3">
+        <div className="px-1">
+          <h3 className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">
             {texts.recentSales}
           </h3>
-          <p className="text-[10px] text-primary/70 font-bold uppercase tracking-tight">
+          <p className="text-[8px] text-primary/70 font-bold uppercase">
             ℹ️ {texts.revealNote}
           </p>
         </div>
         
-        <div className="space-y-3">
+        <div className="space-y-2">
           {recentSales.map((sale) => (
             <div 
               key={sale.id} 
               onClick={() => toggleSaleReveal(sale.id)}
-              className="bg-card/30 border border-border p-6 rounded-2xl flex items-center justify-between active:bg-card/50 transition-all cursor-pointer group min-h-[64px]"
+              className="bg-card/30 border border-border p-3 rounded-xl flex items-center justify-between active:bg-card/50 transition-all cursor-pointer group"
             >
-              <div className="flex gap-4 items-center">
-                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-4xl group-active:scale-95 transition-transform">
+              <div className="flex gap-3 items-center">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-xl">
                   {sale.item.includes('आटा') || sale.item === 'Aata' ? '🌾' : sale.item.includes('दूध') || sale.item === 'Milk' ? '🥛' : '🧼'}
                 </div>
                 <div>
-                  <h4 className="font-bold text-xl">{sale.item}</h4>
-                  <p className="text-sm text-muted-foreground font-bold">{sale.qty} • {sale.customer}</p>
-                  <p className="text-xs text-muted-foreground/60">{sale.time}</p>
+                  <h4 className="font-bold text-sm">{sale.item}</h4>
+                  <p className="text-[10px] text-muted-foreground">{sale.qty} • {sale.customer}</p>
                 </div>
               </div>
               <div className="flex flex-col items-end">
                 {revealedSales.has(sale.id) ? (
-                  <span className="text-4xl font-black text-primary animate-in zoom-in-95 duration-200">
+                  <span className="text-xl font-black text-primary animate-in zoom-in-95">
                     ₹{sale.amount}
                   </span>
                 ) : (
-                  <div className="flex items-center gap-2 h-16 px-6 bg-primary/10 rounded-2xl text-sm font-bold uppercase tracking-wider text-primary group-hover:bg-primary/20 transition-colors">
-                    <Eye size={20} /> {texts.reveal}
+                  <div className="flex items-center gap-1 h-8 px-3 bg-primary/10 rounded-lg text-[10px] font-bold uppercase text-primary">
+                    <Eye size={12} /> {texts.reveal}
                   </div>
                 )}
               </div>

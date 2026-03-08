@@ -121,14 +121,12 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
       const data = await response.json();
       const content = data.choices[0].message.content;
       
-      // Attempt to parse JSON if model returns it
       try {
         const parsed = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
         speak(parsed.reply);
         onTransactionSuccess({ productName: parsed.product || query, amount: 0 });
         if (parsed.lesson) onLessonGenerated(parsed.lesson);
       } catch (e) {
-        // Fallback if not JSON
         speak(content);
         onTransactionSuccess({ productName: query, amount: 0 });
       }
@@ -150,39 +148,39 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
 
   if (showTextInput) {
     return (
-      <div className="w-full max-w-md px-4 animate-in slide-in-from-bottom-4">
+      <div className="w-full max-w-sm px-4 animate-in slide-in-from-bottom-4">
         <form
           onSubmit={handleTextSubmit}
-          className="space-y-4 bg-card/80 backdrop-blur-md p-6 rounded-[2.5rem] border-2 border-primary/20 shadow-2xl"
+          className="space-y-3 bg-card/90 backdrop-blur-md p-4 rounded-3xl border border-primary/20 shadow-2xl"
         >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-2xl font-black text-primary">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-bold text-primary">
               {language === "hi-IN" ? "लिख कर बताएं" : "Type Command"}
             </h3>
             <button
               type="button"
               onClick={() => setShowTextInput(false)}
-              className="p-4 text-muted-foreground hover:text-white"
+              className="p-2 text-muted-foreground"
             >
-              <X size={32} />
+              <X size={20} />
             </button>
           </div>
           <Input
             value={textQuery}
             onChange={(e) => setTextQuery(e.target.value)}
             placeholder={language === "hi-IN" ? "५ किलो आटा बेचा..." : "Sold 5kg flour..."}
-            className="h-20 text-4xl font-black bg-background border-border rounded-2xl px-6"
+            className="h-10 text-sm bg-background border-border rounded-xl px-4"
             autoFocus
           />
           <Button
             disabled={isProcessing || !textQuery.trim()}
-            className="w-full h-20 text-4xl font-black rounded-2xl flex items-center gap-3 bg-primary text-white"
+            className="w-full h-10 text-sm font-bold rounded-xl flex items-center gap-2 bg-primary text-white"
           >
             {isProcessing ? (
-              <Loader2 className="animate-spin" size={40} />
+              <Loader2 className="animate-spin" size={18} />
             ) : (
               <>
-                <Send size={40} />
+                <Send size={18} />
                 {language === "hi-IN" ? "भेजें" : "Send"}
               </>
             )}
@@ -193,21 +191,21 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="flex items-center gap-6">
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex items-center gap-4">
         <button
           onClick={startListening}
           disabled={isProcessing}
           className={cn(
-            "w-32 h-32 rounded-full flex items-center justify-center shadow-[0_20px_70px_-15px_rgba(196,80,0,0.6)] transition-all active:scale-90 relative overflow-hidden",
+            "w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90 relative overflow-hidden",
             isProcessing ? "bg-muted cursor-wait" : "bg-primary",
-            isListening && "voice-pulse ring-[12px] ring-primary/30"
+            isListening && "voice-pulse ring-4 ring-primary/30"
           )}
         >
           {isProcessing ? (
-            <Loader2 className="w-16 h-16 text-white animate-spin" />
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
           ) : (
-            <Mic className="w-16 h-16 text-white" />
+            <Mic className="w-10 h-10 text-white" />
           )}
           {isListening && (
             <span className="absolute inset-0 bg-white/20 animate-ping rounded-full pointer-events-none" />
@@ -216,13 +214,13 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
 
         <button
           onClick={() => setShowTextInput(true)}
-          className="w-20 h-20 rounded-full bg-card/50 border-2 border-border flex items-center justify-center text-muted-foreground hover:text-primary transition-colors active:scale-90 shadow-lg"
+          className="w-14 h-14 rounded-full bg-card/50 border border-border flex items-center justify-center text-muted-foreground hover:text-primary transition-colors active:scale-90"
         >
-          <Keyboard size={40} />
+          <Keyboard size={24} />
         </button>
       </div>
 
-      <p className="text-4xl font-black text-muted-foreground uppercase tracking-tighter opacity-60">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
         {isListening
           ? language === "hi-IN" ? "सुन रहा हूँ..." : "Listening..."
           : language === "hi-IN" ? "टैप करें" : "Tap"}

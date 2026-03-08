@@ -26,52 +26,52 @@ export default function SeekhaTab({ language }: SeekhaTabProps) {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex gap-2 justify-center mb-6">
+    <div className="space-y-4">
+      <div className="flex gap-1.5 justify-center mb-4">
         {[1, 2, 3, 4].map((i) => (
           <div 
             key={i} 
-            className={cn("w-5 h-5 rounded-full", i <= 2 ? "bg-primary" : "bg-muted")} 
+            className={cn("w-2 h-2 rounded-full", i <= 2 ? "bg-primary" : "bg-muted")} 
           />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         {LESSONS.map((lesson) => (
           <Card 
             key={lesson.id} 
             className={cn(
-              "overflow-hidden rounded-[2.5rem] border-none shadow-2xl relative",
+              "overflow-hidden rounded-2xl border-none shadow-md relative",
               lesson.unlocked ? "bg-card" : "bg-card/20 grayscale opacity-50"
             )}
           >
             <CardContent className="p-0">
               {!lesson.unlocked && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                  <Lock size={64} className="text-white/50" />
+                  <Lock size={32} className="text-white/50" />
                 </div>
               )}
               
-              <div className="p-10 flex flex-col items-center text-center space-y-8">
-                <span className="text-9xl">{lesson.emoji}</span>
-                <h2 className="text-6xl font-black tracking-tighter text-white">{lesson.title}</h2>
-                <div className="text-4xl tracking-widest font-black">{lesson.story}</div>
+              <div className="p-6 flex flex-col items-center text-center space-y-4">
+                <span className="text-5xl">{lesson.emoji}</span>
+                <h2 className="text-2xl font-black tracking-tight text-white">{lesson.title}</h2>
+                <div className="text-lg tracking-widest font-black opacity-80">{lesson.story}</div>
                 
                 {lesson.unlocked && (
-                  <div className="grid grid-cols-2 gap-4 w-full pt-4">
+                  <div className="grid grid-cols-2 gap-2 w-full pt-2">
                     <button 
                       onClick={() => speak(lesson.id, 'lesson')}
-                      className="flex flex-col items-center justify-center gap-2 bg-secondary h-24 rounded-[1.5rem] active:scale-95 transition-all shadow-lg"
+                      className="flex flex-col items-center justify-center gap-1 bg-secondary h-12 rounded-xl active:scale-95 transition-all shadow-md"
                     >
-                      <Volume2 size={40} />
-                      <span className="text-xs font-bold uppercase">{language === 'hi-IN' ? 'सुनो' : 'Suno'}</span>
+                      <Volume2 size={20} />
+                      <span className="text-[8px] font-bold uppercase">{language === 'hi-IN' ? 'सुनो' : 'Suno'}</span>
                     </button>
                     <button 
                       onClick={() => speak(lesson.id, 'ai')}
-                      className="flex flex-col items-center justify-center gap-2 bg-primary h-24 rounded-[1.5rem] active:scale-95 transition-all shadow-lg"
+                      className="flex flex-col items-center justify-center gap-1 bg-primary h-12 rounded-xl active:scale-95 transition-all shadow-md"
                     >
-                      <Bot size={40} />
-                      <span className="text-xs font-bold uppercase">{language === 'hi-IN' ? 'AI क्या है?' : 'AI Why?'}</span>
+                      <Bot size={20} />
+                      <span className="text-[8px] font-bold uppercase">{language === 'hi-IN' ? 'एआई क्या?' : 'AI Why?'}</span>
                     </button>
                   </div>
                 )}
