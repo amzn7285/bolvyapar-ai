@@ -1,64 +1,51 @@
-'use server';
-/**
- * @fileOverview A Genkit flow that generates a passive business or AI insight lesson
- *               based on transaction details for Indian kirana shopkeepers.
- *
- * - generatePassiveBusinessLesson - A function that handles the lesson generation process.
- * - GeneratePassiveBusinessLessonInput - The input type for the generatePassiveBusinessLesson function.
- * - GeneratePassiveBusinessLessonOutput - The return type for the generatePassiveBusinessLesson function.
- */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+'use server';
+
+import { z } from 'zod';
 
 const GeneratePassiveBusinessLessonInputSchema = z.object({
-  productName: z.string().describe('The name of the product involved in the transaction.'),
-  quantity: z.number().optional().describe('The quantity of the product.'),
-  unit: z.string().optional().describe('The unit of measurement for the quantity (e.g., "kg", "L", "units").'),
-  customerName: z.string().optional().describe('The name of the customer, if mentioned.'),
-  price: z.number().optional().describe('The price of the transaction or product.'),
-  language: z.enum(['en-IN', 'hi-IN']).describe('The language for the lesson (en-IN for English, hi-IN for Hindi).'),
+  productName: z.string(),
+  quantity: z.number().optional(),
+  unit: z.string().optional(),
+  customerName: z.string().optional(),
+  price: z.number().optional(),
+  language: z.enum(['en-IN', 'hi-IN']),
 });
 export type GeneratePassiveBusinessLessonInput = z.infer<typeof GeneratePassiveBusinessLessonInputSchema>;
 
 const GeneratePassiveBusinessLessonOutputSchema = z.object({
-  lesson_text: z.string().describe('A 2-sentence business or AI insight related to the transaction.'),
+  lesson_text: z.string(),
 });
 export type GeneratePassiveBusinessLessonOutput = z.infer<typeof GeneratePassiveBusinessLessonOutputSchema>;
 
-const generatePassiveBusinessLessonPrompt = ai.definePrompt({
-  name: 'generatePassiveBusinessLessonPrompt',
-  input: { schema: GeneratePassiveBusinessLessonInputSchema },
-  output: { schema: GeneratePassiveBusinessLessonOutputSchema },
-  prompt: `Based on the following transaction details, generate a 2-sentence business or AI insight for a kirana shopkeeper. This lesson should be relevant, warm, friendly, and easily understandable.
-The lesson should be exactly two sentences long.
+export async function generatePassiveBusinessLesson(input: GeneratePassiveBusinessLessonInput): Promise<GeneratePassiveBusinessLessonOutput> {
+  const systemPrompt = `Generate a 2-sentence business or AI insight for a kirana shopkeeper based on a transaction. 
+Tone: Friendly. 
+Language: ${input.language}. 
+Respond ONLY with JSON: {"lesson_text": "..."}`;
 
-Transaction Details:
-Product: {{{productName}}}
-{{#if quantity}}Quantity: {{{quantity}}}{{#if unit}} {{{unit}}}{{/if}}{{/if}}
-{{#if customerName}}Customer: {{{customerName}}}{{/if}}
-{{#if price}}Price: ₹{{{price}}}{{/if}}
+  const userMessage = `Transaction: ${input.productName} ${input.quantity || ''} ${input.unit || ''}. Customer: ${input.customerName || 'None'}. Price: ${input.price || 'None'}.`;
 
-Please provide the lesson in the requested language: {{{language}}}.`,
-});
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ]
+      })
+    });
 
-export async function generatePassiveBusinessLesson(
-  input: GeneratePassiveBusinessLessonInput
-): Promise<GeneratePassiveBusinessLessonOutput> {
-  return generatePassiveBusinessLessonFlow(input);
-}
-
-const generatePassiveBusinessLessonFlow = ai.defineFlow(
-  {
-    name: 'generatePassiveBusinessLessonFlow',
-    inputSchema: GeneratePassiveBusinessLessonInputSchema,
-    outputSchema: GeneratePassiveBusinessLessonOutputSchema,
-  },
-  async (input) => {
-    const { output } = await generatePassiveBusinessLessonPrompt(input);
-    if (!output) {
-      throw new Error('Failed to generate passive business lesson.');
-    }
-    return output;
+    const data = await response.json();
+    const cleanContent = data.choices[0].message.content.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanContent);
+  } catch (error) {
+    return { lesson_text: "AI is currently offline. Focus on customer service!" };
   }
-);
+}
