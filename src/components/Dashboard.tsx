@@ -1,0 +1,128 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Home, BookOpen, BarChart3, Lock, Users, Eye, EyeOff } from "lucide-react";
+import DukaanTab from "./tabs/DukaanTab";
+import SeekhaTab from "./tabs/SeekhaTab";
+import ReportTab from "./tabs/ReportTab";
+import CustomerView from "./CustomerView";
+import VoiceButton from "./VoiceButton";
+import { useToast } from "@/hooks/use-toast";
+
+interface DashboardProps {
+  role: "owner" | "helper";
+  language: "hi-IN" | "en-IN";
+  onLogout: () => void;
+}
+
+export default function Dashboard({ role, language, onLogout }: DashboardProps) {
+  const [activeTab, setActiveTab] = useState("dukaan");
+  const [privateMode, setPrivateMode] = useState(false);
+  const [showCustomerView, setShowCustomerView] = useState(false);
+  const [lastTransaction, setLastTransaction] = useState<any>(null);
+  const { toast } = useToast();
+
+  const handleTransaction = (details: any) => {
+    setLastTransaction(details);
+    if (showCustomerView) return; // Keep customer view focus
+  };
+
+  if (showCustomerView) {
+    return <CustomerView transaction={lastTransaction} onBack={() => setShowCustomerView(false)} language={language} />;
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
+      {/* Header */}
+      <header className="bg-[#0D2240] px-4 py-3 flex items-center justify-between shadow-lg z-20">
+        <div className="flex items-center gap-2">
+          <span className="text-xl font-bold text-white">दुकान साथी AI</span>
+          <span className="text-lg">{language === 'hi-IN' ? '🇮🇳' : '🇬🇧'}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setPrivateMode(!privateMode)}
+            className={`p-3 rounded-full transition-all ${privateMode ? 'bg-accent text-white' : 'bg-card/50 text-muted-foreground'}`}
+          >
+            {privateMode ? <EyeOff size={24} /> : <Eye size={24} />}
+          </button>
+          <button 
+            onClick={() => setShowCustomerView(true)}
+            className="p-3 rounded-full bg-card/50 text-muted-foreground hover:bg-secondary transition-all"
+          >
+            <Users size={24} />
+          </button>
+          <button 
+            onClick={onLogout}
+            className="p-3 rounded-full bg-card/50 text-muted-foreground hover:bg-destructive transition-all"
+          >
+            <Lock size={24} />
+          </button>
+        </div>
+      </header>
+
+      {privateMode && (
+        <div className="bg-accent/20 border-b border-accent/30 py-1 px-4 text-center">
+          <p className="text-accent-foreground text-xs font-bold uppercase tracking-wider">
+            {language === 'hi-IN' ? 'प्राइवेट मोड चालू - नंबर छिपे हुए हैं' : 'Private Mode ON — Numbers hidden'}
+          </p>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto pb-32">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+          <TabsContent value="dukaan" className="m-0 p-4 animate-in fade-in slide-in-from-right-4">
+            <DukaanTab privateMode={privateMode} language={language} onTransaction={handleTransaction} />
+          </TabsContent>
+          <TabsContent value="seekha" className="m-0 p-4 animate-in fade-in slide-in-from-right-4">
+            <SeekhaTab language={language} />
+          </TabsContent>
+          <TabsContent value="report" className="m-0 p-4 animate-in fade-in slide-in-from-right-4">
+            <ReportTab role={role} privateMode={privateMode} language={language} />
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      {/* Voice Button - Fixed Center */}
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
+        <VoiceButton 
+          language={language} 
+          privateMode={privateMode} 
+          onTransactionSuccess={handleTransaction} 
+        />
+      </div>
+
+      {/* Tab Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border px-6 py-2 flex justify-between items-center z-40 pb-safe">
+        <button 
+          onClick={() => setActiveTab("dukaan")}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dukaan' ? 'text-primary' : 'text-muted-foreground'}`}
+        >
+          <Home size={activeTab === 'dukaan' ? 28 : 24} />
+          <span className="text-[10px] font-bold uppercase">{language === 'hi-IN' ? 'दुकान' : 'Dukaan'}</span>
+        </button>
+        
+        <button 
+          onClick={() => setActiveTab("seekha")}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'seekha' ? 'text-primary' : 'text-muted-foreground'}`}
+        >
+          <BookOpen size={activeTab === 'seekha' ? 28 : 24} />
+          <span className="text-[10px] font-bold uppercase">{language === 'hi-IN' ? '📚 सीखा' : '📚 Seekha'}</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab("report")}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'report' ? 'text-primary' : 'text-muted-foreground'}`}
+          disabled={role === 'helper'}
+        >
+          <BarChart3 size={activeTab === 'report' ? 28 : 24} className={role === 'helper' ? 'opacity-30' : ''} />
+          <span className={`text-[10px] font-bold uppercase ${role === 'helper' ? 'opacity-30' : ''}`}>
+            {language === 'hi-IN' ? 'रिपोर्ट' : 'Report'}
+          </span>
+        </button>
+      </nav>
+    </div>
+  );
+}
