@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, BookOpen, BarChart3, Lock, Users, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Home, BookOpen, BarChart3, Lock, Users, Eye, EyeOff, Volume2, X } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import SeekhaTab from "./tabs/SeekhaTab";
 import ReportTab from "./tabs/ReportTab";
 import CustomerView from "./CustomerView";
 import VoiceButton from "./VoiceButton";
-import { useToast } from "@/hooks/use-toast";
 
 interface DashboardProps {
   role: "owner" | "helper";
@@ -16,16 +15,45 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+const SNOOZE_KEY = "dukaansaathi_lesson_snooze";
+const SNOOZE_DURATION = 3600000; // 1 hour
+
 export default function Dashboard({ role, language, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState("dukaan");
   const [privateMode, setPrivateMode] = useState(false);
   const [showCustomerView, setShowCustomerView] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<any>(null);
-  const { toast } = useToast();
+  const [currentLesson, setCurrentLesson] = useState<string | null>(null);
+  const [showLessonCard, setShowLessonCard] = useState(false);
 
   const handleTransaction = (details: any) => {
     setLastTransaction(details);
-    if (showCustomerView) return; // Keep customer view focus
+  };
+
+  const handleLessonGenerated = (lesson: string) => {
+    const snoozeTime = localStorage.getItem(SNOOZE_KEY);
+    if (snoozeTime && Date.now() - parseInt(snoozeTime) < SNOOZE_DURATION) {
+      return;
+    }
+
+    setCurrentLesson(lesson);
+    // Wait 3 seconds before showing the card
+    setTimeout(() => {
+      setShowLessonCard(true);
+    }, 3000);
+  };
+
+  const handleDismissLesson = () => {
+    localStorage.setItem(SNOOZE_KEY, Date.now().toString());
+    setShowLessonCard(false);
+  };
+
+  const speakLesson = (text: string) => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language;
+    utterance.rate = 1.0;
+    window.speechSynthesis.speak(utterance);
   };
 
   if (showCustomerView) {
@@ -42,7 +70,10 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
         </div>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setPrivateMode(!privateMode)}
+            onClick={() => {
+              setPrivateMode(!privateMode);
+              if (!privateMode) setShowLessonCard(false); // Hide lesson card when entering private mode
+            }}
             className={`p-3 rounded-full transition-all ${privateMode ? 'bg-accent text-white' : 'bg-card/50 text-muted-foreground'}`}
           >
             {privateMode ? <EyeOff size={24} /> : <Eye size={24} />}
@@ -85,12 +116,41 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
         </Tabs>
       </main>
 
+      {/* Passive Lesson Card */}
+      {showLessonCard && !privateMode && !showCustomerView && currentLesson && (
+        <div className="fixed bottom-32 left-4 right-4 bg-card border-2 border-primary/30 rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-full duration-500 z-[60] flex items-center gap-6">
+          <div className="text-6xl select-none">📚</div>
+          <div className="flex-1 space-y-3">
+            <p className="text-xs font-bold text-primary uppercase tracking-widest">
+              {language === 'hi-IN' ? 'नया सबक उपलब्ध' : 'NEW LESSON AVAILABLE'}
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => speakLesson(currentLesson)}
+                className="bg-secondary text-white px-6 py-4 rounded-2xl flex items-center gap-2 font-bold active:scale-95 transition-all text-lg flex-1 justify-center"
+              >
+                <Volume2 size={24} />
+                {language === 'hi-IN' ? 'सुनो' : 'Listen'}
+              </button>
+              <button 
+                onClick={handleDismissLesson}
+                className="bg-muted text-muted-foreground px-6 py-4 rounded-2xl flex items-center gap-2 font-bold active:scale-95 transition-all text-lg flex-1 justify-center"
+              >
+                <X size={24} />
+                {language === 'hi-IN' ? 'बाद में' : 'Later'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Voice Button - Fixed Center */}
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
         <VoiceButton 
           language={language} 
           privateMode={privateMode} 
           onTransactionSuccess={handleTransaction} 
+          onLessonGenerated={handleLessonGenerated}
         />
       </div>
 

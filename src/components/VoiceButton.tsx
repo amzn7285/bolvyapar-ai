@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, Loader2, BookOpen } from "lucide-react";
+import { Mic, Loader2 } from "lucide-react";
 import { processVoiceSaleTransaction } from "@/ai/flows/process-voice-sale-transaction";
 import { cn } from "@/lib/utils";
 
@@ -10,13 +9,12 @@ interface VoiceButtonProps {
   language: "hi-IN" | "en-IN";
   privateMode: boolean;
   onTransactionSuccess: (details: any) => void;
+  onLessonGenerated: (lessonText: string) => void;
 }
 
-export default function VoiceButton({ language, privateMode, onTransactionSuccess }: VoiceButtonProps) {
+export default function VoiceButton({ language, privateMode, onTransactionSuccess, onLessonGenerated }: VoiceButtonProps) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showLesson, setShowLesson] = useState(false);
-  const [lessonContent, setLessonContent] = useState("");
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -48,7 +46,6 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
   const startListening = () => {
     if (isListening) return;
     setIsListening(true);
-    setShowLesson(false);
     speak(language === 'hi-IN' ? "बोलिए" : "Go ahead");
     recognitionRef.current?.start();
   };
@@ -65,11 +62,7 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
       if (result) {
         speak(result.spokenResponse);
         onTransactionSuccess(result.transactionDetails);
-        setLessonContent(result.lessonText);
-        
-        setTimeout(() => {
-          setShowLesson(true);
-        }, 3000);
+        onLessonGenerated(result.lessonText);
       }
     } catch (err) {
       console.error(err);
@@ -79,21 +72,8 @@ export default function VoiceButton({ language, privateMode, onTransactionSucces
     }
   };
 
-  const handleLessonTap = () => {
-    alert(lessonContent);
-  };
-
   return (
     <div className="flex flex-col items-center gap-4">
-      {showLesson && (
-        <button 
-          onClick={handleLessonTap}
-          className="bg-accent text-white py-2 px-6 rounded-full flex items-center gap-2 animate-in zoom-in-50 slide-in-from-bottom-4 duration-500 shadow-xl border-2 border-accent-foreground/20 font-bold uppercase tracking-wider text-xs"
-        >
-          <BookOpen size={18} /> {language === 'hi-IN' ? 'सीखें' : 'Unlock Lesson'}
-        </button>
-      )}
-
       <button
         onClick={startListening}
         disabled={isProcessing}
