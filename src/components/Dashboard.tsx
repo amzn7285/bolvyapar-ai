@@ -1,12 +1,13 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, BookOpen, Lock, Users, Eye, EyeOff, Volume2, X } from "lucide-react";
+import { Home, Package, BarChart3, Settings, Lock, Users, Eye, EyeOff, Volume2, X } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
-import SeekhaTab from "./tabs/SeekhaTab";
 import ReportTab from "./tabs/ReportTab";
+import SettingsTab from "./tabs/SettingsTab";
 import CustomerView from "./CustomerView";
 import VoiceButton from "./VoiceButton";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ interface DashboardProps {
 const SALES_STORAGE_KEY = "bolvyapar_sales_history";
 const EXPENSES_STORAGE_KEY = "bolvyapar_expenses_history";
 const STOCK_STORAGE_KEY = "bolvyapar_stock_data";
-const SNOOZE_KEY = "bolvyapar_lesson_snooze";
+const PROFILE_KEY = "bolvyapar_profile";
 const SNOOZE_DURATION = 3600000;
 
 const DEFAULT_STOCK = [
@@ -36,6 +37,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const [sales, setSales] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [stock, setStock] = useState<any[]>(DEFAULT_STOCK);
+  const [profile, setProfile] = useState<any>(null);
   const [lastTransaction, setLastTransaction] = useState<any>(null);
   const [currentLesson, setCurrentLesson] = useState<string | null>(null);
   const [showLessonCard, setShowLessonCard] = useState(false);
@@ -55,6 +57,11 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     const savedStock = localStorage.getItem(STOCK_STORAGE_KEY);
     if (savedStock) {
       try { setStock(JSON.parse(savedStock)); } catch (e) { console.error(e); }
+    }
+
+    const savedProfile = localStorage.getItem(PROFILE_KEY);
+    if (savedProfile) {
+      try { setProfile(JSON.parse(savedProfile)); } catch (e) { console.error(e); }
     }
   }, []);
 
@@ -88,7 +95,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     setLastTransaction(details);
     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updatedSales));
 
-    // Update Stock
+    // Update Stock Logic
     const soldQty = Number(details.quantity) || 0;
     const prodName = (details.productName || "").toLowerCase();
 
@@ -169,6 +176,11 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. Respond ONLY with the s
     }
   };
 
+  const handleUpdateProfile = (newProfile: any) => {
+    setProfile(newProfile);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile));
+  };
+
   const handleAddCategory = (newCategory: any) => {
     const updatedStock = [...stock, {
       ...newCategory,
@@ -181,8 +193,6 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. Respond ONLY with the s
   };
 
   const handleLessonGenerated = (lesson: string) => {
-    const snoozeTime = localStorage.getItem(SNOOZE_KEY);
-    if (snoozeTime && Date.now() - parseInt(snoozeTime) < SNOOZE_DURATION) return;
     setCurrentLesson(lesson);
     setTimeout(() => setShowLessonCard(true), 3000);
   };
@@ -205,8 +215,8 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. Respond ONLY with the s
   }
 
   const texts = {
-    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", report: "रिपोर्ट", seekha: "सीखा" },
-    "en-IN": { dukaan: "Dukaan", stock: "Stock", report: "Report", seekha: "Seekha" }
+    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", report: "रिपोर्ट", settings: "सेटिंग्स" },
+    "en-IN": { dukaan: "Dukaan", stock: "Stock", report: "Report", settings: "Settings" }
   }[language];
 
   return (
@@ -218,6 +228,11 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. Respond ONLY with the s
             <span className="text-[#1A6B3C]">Vyapar</span>
             <span className="text-[#FFB300] ml-1 text-[10px] font-bold">AI 🇮🇳</span>
           </div>
+          {profile?.shopName && (
+            <span className="text-[10px] text-white/40 font-bold uppercase truncate max-w-[100px] border-l border-white/10 pl-2 ml-1">
+              {profile.shopName}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -251,18 +266,19 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. Respond ONLY with the s
               privateMode={privateMode} 
               language={language} 
               sales={sales} 
+              profile={profile}
               onGenerateSummary={handleDailySummary}
               isGeneratingSummary={isGeneratingSummary}
             />
           </TabsContent>
           <TabsContent value="stock" className="m-0 p-4">
-            <StockTab language={language} stock={stock} onAddCategory={handleAddCategory} sales={sales} />
+            <StockTab language={language} stock={stock} onAddCategory={handleAddCategory} sales={sales} profile={profile} />
           </TabsContent>
           <TabsContent value="report" className="m-0 p-4">
-            <ReportTab role={role} privateMode={privateMode} language={language} sales={sales} expenses={expenses} />
+            <ReportTab role={role} privateMode={privateMode} language={language} sales={sales} expenses={expenses} profile={profile} />
           </TabsContent>
-          <TabsContent value="seekha" className="m-0 p-4">
-            <SeekhaTab language={language} />
+          <TabsContent value="settings" className="m-0 p-4">
+            <SettingsTab language={language} profile={profile} onUpdateProfile={handleUpdateProfile} />
           </TabsContent>
         </Tabs>
       </main>
@@ -314,7 +330,7 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. Respond ONLY with the s
           </div>
 
           <NavBtn icon={<BarChart3 size={22} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} disabled={role === 'helper'} />
-          <NavBtn icon={<BookOpen size={22} />} label={texts.seekha} active={activeTab === 'seekha'} onClick={() => setActiveTab('seekha')} />
+          <NavBtn icon={<Settings size={22} />} label={texts.settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         </div>
       </nav>
     </div>

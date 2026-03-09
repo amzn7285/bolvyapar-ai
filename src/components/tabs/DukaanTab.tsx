@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -11,11 +12,12 @@ interface DukaanTabProps {
   privateMode: boolean;
   language: "hi-IN" | "en-IN";
   sales: any[];
+  profile: any;
   onGenerateSummary: () => void;
   isGeneratingSummary?: boolean;
 }
 
-export default function DukaanTab({ privateMode, language, sales, onGenerateSummary, isGeneratingSummary }: DukaanTabProps) {
+export default function DukaanTab({ privateMode, language, sales, profile, onGenerateSummary, isGeneratingSummary }: DukaanTabProps) {
   const [revealedSales, setRevealedSales] = useState<Set<number>>(new Set());
   
   const today = new Date().toDateString();
@@ -37,7 +39,7 @@ export default function DukaanTab({ privateMode, language, sales, onGenerateSumm
       tapToReveal: "कीमत देखने के लिए टैप करें",
       empty: "कोई बिक्री नहीं",
       summary: "आज का हिसाब",
-      share: "व्हाट्सएप रिपोर्ट"
+      share: "WhatsApp रिपोर्ट"
     },
     "en-IN": {
       todaySales: "Today's Sales",
@@ -51,12 +53,13 @@ export default function DukaanTab({ privateMode, language, sales, onGenerateSumm
   }[language];
 
   const handleShareDailySummary = () => {
-    const shopName = "BolVyapar AI Shop";
+    const shopName = profile?.shopName || "BolVyapar AI Shop";
+    const destPhone = profile?.ownerPhone || "";
     const message = language === 'hi-IN'
-      ? `📈 *आज का व्यापार सारांश (${format(new Date(), 'dd MMM')})*\n\n✅ कुल बिक्री: ${count} लेन-देन\n🌟 सबसे ज्यादा बिकने वाला: ${bestItem}\n💡 टिप: ${bestItem} का स्टॉक बनाए रखें।\n\n_BolVyapar AI द्वारा भेजा गया_`
-      : `📈 *Daily Business Summary (${format(new Date(), 'dd MMM')})*\n\n✅ Total Sales: ${count} transactions\n🌟 Top Seller: ${bestItem}\n💡 Tip: Keep ${bestItem} stock ready for high demand.\n\n_Sent via BolVyapar AI_`;
+      ? `📈 *आज का व्यापार सारांश: ${shopName}*\n🗓️ तारीख: ${format(new Date(), 'dd MMM')}\n\n✅ कुल बिक्री: ${count} लेन-देन\n🌟 सबसे ज्यादा बिकने वाला: ${bestItem}\n💡 टिप: ${bestItem} का स्टॉक बनाए रखें।\n\n_BolVyapar AI द्वारा भेजा गया_`
+      : `📈 *Daily Business Summary: ${shopName}*\n🗓️ Date: ${format(new Date(), 'dd MMM')}\n\n✅ Total Sales: ${count} transactions\n🌟 Top Seller: ${bestItem}\n💡 Tip: Keep ${bestItem} stock ready for high demand.\n\n_Sent via BolVyapar AI_`;
 
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/${destPhone}?text=${encodeURIComponent(message)}`, '_blank');
     toast({ title: "Opening WhatsApp..." });
   };
 

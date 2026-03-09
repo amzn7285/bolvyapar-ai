@@ -1,18 +1,28 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import PinLock from "@/components/PinLock";
 import Dashboard from "@/components/Dashboard";
+import ProfileSetup from "@/components/ProfileSetup";
+
+const PROFILE_KEY = "bolvyapar_profile";
 
 export default function Home() {
   const [authenticated, setAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<"owner" | "helper" | null>(null);
   const [language, setLanguage] = useState<"hi-IN" | "en-IN">("hi-IN");
+  const [hasProfile, setHasProfile] = useState(false);
 
   useEffect(() => {
     const savedLang = localStorage.getItem("dukaansaathi_lang") as "hi-IN" | "en-IN";
     if (savedLang) {
       setLanguage(savedLang);
+    }
+
+    const profile = localStorage.getItem(PROFILE_KEY);
+    if (profile) {
+      setHasProfile(true);
     }
   }, []);
 
@@ -31,6 +41,10 @@ export default function Home() {
     localStorage.setItem("dukaansaathi_lang", lang);
   };
 
+  const handleProfileComplete = () => {
+    setHasProfile(true);
+  };
+
   if (!authenticated) {
     return (
       <PinLock 
@@ -39,6 +53,10 @@ export default function Home() {
         onLanguageChange={handleLanguageChange} 
       />
     );
+  }
+
+  if (!hasProfile && userRole === "owner") {
+    return <ProfileSetup onComplete={handleProfileComplete} language={language} />;
   }
 
   return (
