@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Store, User, Phone, ShoppingBasket, Scissors, Wrench, Utensils, Truck, Pill, ScissorsLineDashed, Box, Mic, Loader2, CheckCircle2 } from "lucide-react";
+import { Store, User, Phone, ShoppingBasket, Scissors, Wrench, Utensils, Truck, Pill, Box, Mic, Loader2, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FirstLaunchFlowProps {
@@ -73,7 +73,7 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
     try {
       let systemPrompt = "";
       if (step === 3) {
-        systemPrompt = `Extract stock details from voice. Return ONLY JSON: {"name": "item", "qty": number, "unit": "kg/L/etc", "emoji": "emoji"}`;
+        systemPrompt = `Extract stock details from voice. Context: ${formData.businessType}. Return ONLY JSON: {"name": "item", "qty": number, "unit": "kg/L/etc", "emoji": "emoji"}`;
       } else if (step === 4) {
         systemPrompt = `Extract sale details. Return ONLY JSON: {"productName": "item", "price": number, "quantity": number}`;
       }
@@ -90,7 +90,7 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
         const parsed = JSON.parse(jsonMatch[0]);
         if (step === 3) {
           setFormData({ ...formData, firstStock: parsed });
-          speak(language === 'hi-IN' ? "स्टॉक रिकॉर्ड हो गया" : "Stock recorded");
+          speak(language === 'hi-IN' ? "रिकॉर्ड हो गया" : "Recorded");
         } else if (step === 4) {
           setFormData({ ...formData, firstSale: parsed });
           speak(language === 'hi-IN' ? "बिक्री रिकॉर्ड हो गई" : "Sale recorded");
@@ -126,6 +126,56 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
     onComplete();
   };
 
+  const getStep3Strings = () => {
+    const biz = formData.businessType;
+    const isHi = language === 'hi-IN';
+
+    const config: Record<string, any> = {
+      tailor: {
+        title: isHi ? "कपड़ा और सामान" : "Add Fabric/Materials",
+        sub: isHi ? "पहला थान या रील बोलकर जोड़ें" : "Add first material by voice",
+        instr: isHi ? "जैसे: '50 मीटर सूती कपड़ा है'" : "e.g. 'I have 50 meters cotton fabric'"
+      },
+      repair: {
+        title: isHi ? "पार्ट्स इन्वेंट्री" : "Add Parts Inventory",
+        sub: isHi ? "पहला पुर्जा बोलकर जोड़ें" : "Add first part by voice",
+        instr: isHi ? "जैसे: '20 मोबाइल स्क्रीन हैं'" : "e.g. 'I have 20 mobile screens'"
+      },
+      dhaba: {
+        title: isHi ? "सामग्री जोड़ें" : "Add Ingredients",
+        sub: isHi ? "पहली सामग्री बोलकर जोड़ें" : "Add first ingredient by voice",
+        instr: isHi ? "जैसे: '10 किलो आटा है'" : "e.g. 'I have 10kg atta'"
+      },
+      milk: {
+        title: isHi ? "उत्पाद जोड़ें" : "Add Products",
+        sub: isHi ? "दूध की मात्रा बोलकर जोड़ें" : "Add milk quantity by voice",
+        instr: isHi ? "जैसे: '50 लीटर दूध रोज़ आता है'" : "e.g. 'I deliver 50 litres daily'"
+      },
+      medical: {
+        title: isHi ? "दवाइयां जोड़ें" : "Add Medicines",
+        sub: isHi ? "पहली दवा बोलकर जोड़ें" : "Add first medicine by voice",
+        instr: isHi ? "जैसे: '100 पैरासिटामोल टैबलेट हैं'" : "e.g. 'I have 100 Paracetamol tablets'"
+      },
+      salon: {
+        title: isHi ? "ब्यूटी प्रोडक्ट्स" : "Add Products",
+        sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add first product by voice",
+        instr: isHi ? "जैसे: '5 बोतल शैम्पू है'" : "e.g. 'I have 5 bottles shampoo'"
+      },
+      kirana: {
+        title: isHi ? "स्टॉक जोड़ें" : "Add Stock",
+        sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add your first item by voice",
+        instr: isHi ? "जैसे: '10 किलो चावल है'" : "e.g. 'I have 10kg Rice'"
+      },
+      other: {
+        title: isHi ? "स्टॉक जोड़ें" : "Add Stock",
+        sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add your first item by voice",
+        instr: isHi ? "जैसे: '100 पीस माल है'" : "e.g. 'I have 100 units stock'"
+      }
+    };
+
+    return config[biz] || config['kirana'];
+  };
+
   const texts = {
     "hi-IN": {
       step1Title: "दुकान की जानकारी",
@@ -134,9 +184,6 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
       ownerPhone: "आपका WhatsApp नंबर",
       step2Title: "व्यापार का प्रकार",
       step2Sub: "एक विकल्प चुनें",
-      step3Title: "स्टॉक जोड़ें",
-      step3Sub: "बोलकर अपना पहला सामान जोड़ें",
-      step3Instr: "जैसे: '10 किलो चावल है'",
       step4Title: "पहली बिक्री",
       step4Sub: "बोलकर पहली बिक्री दर्ज करें",
       step4Instr: "जैसे: '2 किलो चावल बेचा 100 रुपये में'",
@@ -152,9 +199,6 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
       ownerPhone: "Your WhatsApp Number",
       step2Title: "Business Type",
       step2Sub: "Select your category",
-      step3Title: "Add Stock",
-      step3Sub: "Add your first item by voice",
-      step3Instr: "e.g. 'I have 10kg Rice'",
       step4Title: "First Sale",
       step4Sub: "Record your first sale by voice",
       step4Instr: "e.g. 'Sold 2kg Rice for 100 rupees'",
@@ -164,6 +208,8 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
       congratsSub: "Your setup is complete"
     }
   }[language];
+
+  const step3Content = getStep3Strings();
 
   return (
     <div className="fixed inset-0 bg-[#0D2240] z-[100] flex flex-col p-6 overflow-y-auto">
@@ -223,7 +269,7 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
                   }}
                   className={cn(
                     "flex flex-col items-center justify-center p-6 rounded-[32px] border transition-all active:scale-95",
-                    formData.businessType === type.id ? "bg-[#C45000] border-[#C45000]" : "bg-white/5 border-white/10"
+                    formData.businessType === type.id ? "bg-[#38BDF8] border-[#38BDF8]" : "bg-white/5 border-white/10"
                   )}
                 >
                   <span className="text-4xl mb-3">{type.emoji}</span>
@@ -239,8 +285,8 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
         {step === 3 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
             <div className="text-center space-y-2">
-              <h1 className="text-4xl font-black text-white tracking-tight">{texts.step3Title}</h1>
-              <p className="text-white/60 font-medium">{texts.step3Sub}</p>
+              <h1 className="text-4xl font-black text-white tracking-tight">{step3Content.title}</h1>
+              <p className="text-white/60 font-medium">{step3Content.sub}</p>
             </div>
             <div className="flex flex-col items-center space-y-8">
               <button 
@@ -255,7 +301,7 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
                 {isProcessing ? <Loader2 className="text-white animate-spin" size={48} /> : 
                  formData.firstStock ? <CheckCircle2 className="text-white" size={48} /> : <Mic className="text-white" size={48} />}
               </button>
-              <p className="text-white/40 text-sm italic">{texts.step3Instr}</p>
+              <p className="text-white/40 text-sm italic text-center px-4">{step3Content.instr}</p>
               {formData.firstStock && (
                 <div className="bg-white/5 p-4 rounded-2xl border border-emerald-500/30 text-emerald-400 text-sm font-bold flex gap-2">
                   <CheckCircle2 size={16} /> {formData.firstStock.name} - {formData.firstStock.qty} {formData.firstStock.unit}
@@ -291,7 +337,7 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
                 {isProcessing ? <Loader2 className="text-white animate-spin" size={48} /> : 
                  formData.firstSale ? <CheckCircle2 className="text-white" size={48} /> : <Mic className="text-white" size={48} />}
               </button>
-              <p className="text-white/40 text-sm italic">{texts.step4Instr}</p>
+              <p className="text-white/40 text-sm italic text-center px-4">{texts.step4Instr}</p>
               {formData.firstSale && (
                 <div className="bg-white/5 p-4 rounded-2xl border border-emerald-500/30 text-emerald-400 text-sm font-bold flex gap-2">
                   <CheckCircle2 size={16} /> {formData.firstSale.productName} - ₹{formData.firstSale.price}
