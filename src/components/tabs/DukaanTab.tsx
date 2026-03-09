@@ -1,12 +1,9 @@
-
 "use client";
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Eye, TrendingUp, BarChart2, Loader2, Share2, Wallet } from "lucide-react";
-import { format } from "date-fns";
-import { toast } from "@/hooks/use-toast";
+import { Eye, TrendingUp, BarChart2, Loader2, Wallet } from "lucide-react";
 
 interface DukaanTabProps {
   privateMode: boolean;
@@ -30,12 +27,11 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
     "hi-IN": {
       todaySales: "आज की बिक्री",
       recentSales: "हाल की बिक्री",
-      outstanding: "उधार बाकी (Outstanding)",
+      outstanding: "उधार बाकी",
       txns: "लेन-देन",
-      tapToReveal: "कीमत देखने के लिए टैप करें",
+      tapToReveal: "टैप करें",
       empty: "कोई बिक्री नहीं",
-      summary: "आज का हिसाब",
-      share: "WhatsApp"
+      summary: "आज का हिसाब"
     },
     "en-IN": {
       todaySales: "Today's Sales",
@@ -44,14 +40,12 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
       txns: "txns",
       tapToReveal: "Tap to reveal",
       empty: "No sales yet",
-      summary: "Summary",
-      share: "Share"
+      summary: "Summary"
     }
   }[language];
 
   return (
     <div className="space-y-4">
-      {/* Outstanding Balance Banner */}
       <Card className="bg-amber-50 border-amber-200 rounded-2xl shadow-sm border">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -68,10 +62,9 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
         </CardContent>
       </Card>
 
-      {/* Today's Sales Card */}
       <Card className="bg-[#0D2240] border-none rounded-[24px] overflow-hidden shadow-xl">
         <CardContent className="p-6 relative">
-          <TrendingUp size={64} className="absolute right-[-10px] bottom-[-10px] text-white/5 rotate-12" />
+          <TrendingUp size={80} className="absolute right-[-10px] bottom-[-10px] text-white/5 rotate-12" />
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">{texts.todaySales}</p>
@@ -82,16 +75,14 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
                 </span>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <button 
-                onClick={onGenerateSummary}
-                disabled={isGeneratingSummary || count === 0}
-                className="flex items-center gap-2 px-3 py-2 bg-[#C45000] text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              >
-                {isGeneratingSummary ? <Loader2 size={14} className="animate-spin" /> : <BarChart2 size={14} />}
-                {texts.summary}
-              </button>
-            </div>
+            <button 
+              onClick={onGenerateSummary}
+              disabled={isGeneratingSummary || count === 0}
+              className="flex items-center gap-2 px-3 py-2 bg-[#C45000] text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isGeneratingSummary ? <Loader2 size={14} className="animate-spin" /> : <BarChart2 size={14} />}
+              {texts.summary}
+            </button>
           </div>
           <div className="inline-flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full">
             <div className="w-1.5 h-1.5 rounded-full bg-[#1A6B3C]" />
@@ -100,12 +91,8 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
         </CardContent>
       </Card>
 
-      {/* Recent Sales List */}
       <div className="space-y-3">
-        <div className="px-1 flex justify-between items-baseline">
-          <h3 className="text-slate-900 text-lg font-black tracking-tight">{texts.recentSales}</h3>
-        </div>
-        
+        <h3 className="text-slate-900 text-lg font-black tracking-tight">{texts.recentSales}</h3>
         <div className="space-y-2">
           {sales.length === 0 ? (
             <div className="text-center py-12 opacity-40">

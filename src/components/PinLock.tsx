@@ -56,7 +56,6 @@ export default function PinLock({ onAuth, language, onLanguageChange }: PinLockP
 
   return (
     <div className="flex flex-col items-center justify-between h-full p-6 text-center bg-[#0D2240] overflow-y-auto">
-      {/* Logo & Branding */}
       <div className="w-full max-w-sm flex flex-col items-center mt-12">
         <div className="flex items-center gap-2 mb-3">
           <div className="relative flex items-center justify-center h-14 w-14 bg-white/10 rounded-2xl overflow-hidden backdrop-blur-md border border-white/20">
@@ -73,7 +72,6 @@ export default function PinLock({ onAuth, language, onLanguageChange }: PinLockP
           {texts.tagline}
         </p>
         
-        {/* Language Selector */}
         <div className="w-full space-y-4 mb-8">
           <p className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold">{texts.select}</p>
           <div className="grid grid-cols-2 gap-3 px-4">
@@ -96,7 +94,6 @@ export default function PinLock({ onAuth, language, onLanguageChange }: PinLockP
         </div>
       </div>
 
-      {/* PIN Entry */}
       <div className="w-full max-w-xs space-y-12 mb-8">
         <div className="flex flex-col items-center gap-6">
           <div className="flex gap-5">

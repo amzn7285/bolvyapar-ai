@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, Volume2 } from "lucide-react";
+import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, UserSquare2 } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
 import ReportTab from "./tabs/ReportTab";
 import SettingsTab from "./tabs/SettingsTab";
 import CreditKhataTab from "./tabs/CreditKhataTab";
 import VoiceButton from "./VoiceButton";
+import CustomerView from "./CustomerView";
 import { cn } from "@/lib/utils";
 
 interface DashboardProps {
@@ -32,12 +33,14 @@ const DEFAULT_STOCK = [
 export default function Dashboard({ role, language, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState("dukaan");
   const [privateMode, setPrivateMode] = useState(false);
+  const [isCustomerView, setIsCustomerView] = useState(false);
   const [sales, setSales] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [stock, setStock] = useState<any[]>(DEFAULT_STOCK);
   const [creditKhata, setCreditKhata] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [lastTransaction, setLastTransaction] = useState<any>(null);
 
   useEffect(() => {
     const savedSales = localStorage.getItem(SALES_STORAGE_KEY);
@@ -68,6 +71,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
 
   const handleTransaction = (details: any) => {
     const timestamp = new Date().toISOString();
+    setLastTransaction({ ...details, timestamp });
     
     if (details.isExpense) {
       const newExpense = {
@@ -189,9 +193,13 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const redItemsCount = stock.filter(item => item.qty < ((item.lowStockLevel || 10) * 0.15)).length;
 
   const texts = {
-    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", khata: "खाता", report: "रिपोर्ट", settings: "सेटिंग्स" },
-    "en-IN": { dukaan: "Home", stock: "Stock", khata: "Khata", report: "Report", settings: "Settings" }
+    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", khata: "खाता", report: "रिपोर्ट", customer: "ग्राहक व्यू" },
+    "en-IN": { dukaan: "Home", stock: "Stock", khata: "Khata", report: "Report", customer: "Customer View" }
   }[language];
+
+  if (isCustomerView) {
+    return <CustomerView transaction={lastTransaction} onBack={() => setIsCustomerView(false)} language={language} />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#F8FAFC] relative overflow-hidden">
@@ -270,7 +278,10 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
           </div>
 
           <NavBtn icon={<BookOpen size={22} />} label={texts.khata} active={activeTab === 'khata'} onClick={() => setActiveTab('khata')} />
-          <NavBtn icon={<BarChart3 size={22} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} disabled={role === 'helper'} />
+          <NavBtn icon={<UserSquare2 size={22} />} label={texts.customer} active={isCustomerView} onClick={() => setIsCustomerView(true)} />
+          {role === 'owner' && (
+            <NavBtn icon={<BarChart3 size={22} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} />
+          )}
         </div>
       </nav>
     </div>
