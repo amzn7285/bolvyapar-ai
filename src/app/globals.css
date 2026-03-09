@@ -34,6 +34,7 @@
   body {
     @apply bg-slate-50 text-foreground antialiased;
     font-family: 'PT Sans', sans-serif;
+    font-size: 16px; /* Minimum body text 16px */
   }
 }
 
@@ -49,6 +50,11 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* Reduced animation speed by 50% for performance */
+.animate-in {
+  animation-duration: 150ms !important;
 }
 
 @keyframes flash {
