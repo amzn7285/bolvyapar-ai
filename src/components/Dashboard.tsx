@@ -134,12 +134,14 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     const soldQty = Number(details.quantity) || 0;
     const prodName = (details.productName || "").toLowerCase();
 
+    // Matching logic using either learned category or fuzzy matching from StockTab
     const updatedStock = stock.map(item => {
       let isMatch = false;
       const itemName = item.name.toLowerCase();
-      const itemHiName = item.hiName.toLowerCase();
+      const itemHiName = (item.hiName || "").toLowerCase();
 
-      if (prodName.includes(itemName) || prodName.includes(itemHiName)) {
+      // Check for direct match or fuzzy match (learned mapping is handled in VoiceButton)
+      if (prodName.includes(itemName) || prodName.includes(itemHiName) || details.matchedCategory === item.name) {
         isMatch = true;
       }
 
@@ -282,6 +284,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
               onSummaryRequested={handleDailySummary}
               salesHistory={sales}
               businessType={profile?.businessType}
+              stock={stock}
               compact
             />
           </div>
