@@ -91,6 +91,9 @@ Return ONLY a raw JSON object (no markdown, no other text) with:
 {
   "spokenResponse": "A short, warm 1-sentence confirmation in ${language === 'hi-IN' ? 'Hindi' : 'English'}",
   "productName": "Item name",
+  "quantity": number,
+  "unit": "kg/L/units",
+  "customerName": "Name of customer if mentioned, else 'Customer'",
   "price": number,
   "lessonText": "A 1-sentence business insight based on this transaction"
 }
@@ -109,10 +112,12 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}.`;
       const data = await response.json();
       const rawReply = data.reply || "";
       
-      // Robust JSON extraction from LLM response
       let parsed = {
         spokenResponse: language === "hi-IN" ? "बिक्री दर्ज हो गई!" : "Sale recorded!",
         productName: query,
+        quantity: 1,
+        unit: "unit",
+        customerName: language === "hi-IN" ? "ग्राहक" : "Customer",
         price: 0,
         lessonText: language === "hi-IN" ? "अपना व्यापार बढ़ाते रहें!" : "Keep growing your business!"
       };
@@ -128,7 +133,13 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}.`;
       }
 
       speak(parsed.spokenResponse);
-      onTransactionSuccess({ productName: parsed.productName, price: parsed.price });
+      onTransactionSuccess({ 
+        productName: parsed.productName, 
+        price: parsed.price,
+        quantity: parsed.quantity,
+        unit: parsed.unit,
+        customerName: parsed.customerName
+      });
       onLessonGenerated(parsed.lessonText);
 
       setTextQuery("");

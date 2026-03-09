@@ -4,34 +4,37 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Eye, TrendingUp } from "lucide-react";
+import { format } from "date-fns";
 
 interface DukaanTabProps {
   privateMode: boolean;
   language: "hi-IN" | "en-IN";
+  sales: any[];
 }
 
-export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
-  const [salesData] = useState({ total: 1450, count: 12 });
+export default function DukaanTab({ privateMode, language, sales }: DukaanTabProps) {
   const [revealedSales, setRevealedSales] = useState<Set<number>>(new Set());
   
-  const [recentSales] = useState([
-    { id: 1, item: language === 'hi-IN' ? 'आटा' : 'Aata', qty: '5kg', customer: 'Rahul', amount: 240 },
-    { id: 2, item: language === 'hi-IN' ? 'दूध' : 'Milk', qty: '2L', customer: 'Sita', amount: 120 },
-    { id: 3, item: language === 'hi-IN' ? 'साबुन' : 'Soap', qty: '3 units', customer: 'Amit', amount: 300 },
-  ]);
+  // Calculate today's stats from the real sales array
+  const today = new Date().toDateString();
+  const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today);
+  const totalAmount = todaySales.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const count = todaySales.length;
 
   const texts = {
     "hi-IN": {
       todaySales: "आज की बिक्री",
       recentSales: "हाल की बिक्री",
       txns: "लेन-देन",
-      tapToReveal: "कीमत देखने के लिए टैप करें"
+      tapToReveal: "कीमत देखने के लिए टैप करें",
+      empty: "कोई बिक्री नहीं"
     },
     "en-IN": {
       todaySales: "Today's Sales",
       recentSales: "Recent Sales",
       txns: "txns",
-      tapToReveal: "Tap sale to reveal privately"
+      tapToReveal: "Tap sale to reveal privately",
+      empty: "No sales yet"
     }
   }[language];
 
@@ -45,12 +48,12 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
           <div className="flex items-baseline gap-1 mb-2">
             <span className="text-xl font-bold text-[#C45000]">₹</span>
             <span className={cn("text-[32px] font-black text-white transition-all", privateMode && "blur-xl")}>
-              {salesData.total.toLocaleString()}
+              {totalAmount.toLocaleString()}
             </span>
           </div>
           <div className="inline-flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full">
             <div className="w-1.5 h-1.5 rounded-full bg-[#1A6B3C]" />
-            <p className="text-white/60 font-bold text-xs">{salesData.count} {texts.txns}</p>
+            <p className="text-white/60 font-bold text-xs">{count} {texts.txns}</p>
           </div>
         </CardContent>
       </Card>
@@ -63,38 +66,49 @@ export default function DukaanTab({ privateMode, language }: DukaanTabProps) {
         </div>
         
         <div className="space-y-3">
-          {recentSales.map((sale) => (
-            <div 
-              key={sale.id} 
-              onClick={() => {
-                setRevealedSales(prev => {
-                  const next = new Set(prev);
-                  next.has(sale.id) ? next.delete(sale.id) : next.add(sale.id);
-                  return next;
-                });
-              }}
-              className="bg-white border border-slate-100 p-4 rounded-2xl flex items-center justify-between shadow-sm active:bg-slate-50 transition-all cursor-pointer"
-            >
-              <div className="flex gap-4 items-center">
-                <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-2xl">
-                  {sale.item.includes('आटा') || sale.item === 'Aata' ? '🌾' : sale.item.includes('दूध') || sale.item === 'Milk' ? '🥛' : '🧼'}
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-800">{sale.item}</h4>
-                  <p className="text-[11px] text-slate-400 font-medium">{sale.qty} • {sale.customer}</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end">
-                {revealedSales.has(sale.id) ? (
-                  <span className="text-[22px] font-black text-[#C45000] animate-in zoom-in-95">₹{sale.amount}</span>
-                ) : (
-                  <div className="flex items-center gap-2 h-10 px-4 bg-slate-50 rounded-xl text-[10px] font-bold uppercase text-slate-400 border border-slate-100">
-                    <Eye size={14} /> Reveal
-                  </div>
-                )}
-              </div>
+          {sales.length === 0 ? (
+            <div className="text-center py-12 opacity-40">
+              <span className="text-4xl block mb-2">📋</span>
+              <p className="text-sm font-bold">{texts.empty}</p>
             </div>
-          ))}
+          ) : (
+            sales.map((sale) => (
+              <div 
+                key={sale.id} 
+                onClick={() => {
+                  setRevealedSales(prev => {
+                    const next = new Set(prev);
+                    next.has(sale.id) ? next.delete(sale.id) : next.add(sale.id);
+                    return next;
+                  });
+                }}
+                className="bg-white border border-slate-100 p-4 rounded-2xl flex items-center justify-between shadow-sm active:bg-slate-50 transition-all cursor-pointer"
+              >
+                <div className="flex gap-4 items-center">
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-2xl">
+                    {sale.item.toLowerCase().includes('milk') || sale.item.toLowerCase().includes('दूध') ? '🥛' : 
+                     sale.item.toLowerCase().includes('grain') || sale.item.toLowerCase().includes('अनाज') ? '🌾' : 
+                     sale.item.toLowerCase().includes('soap') || sale.item.toLowerCase().includes('साबुन') ? '🧼' : '🛍️'}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-800">{sale.item}</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {sale.qty} • {sale.customer} • {format(new Date(sale.timestamp), 'h:mm a')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  {revealedSales.has(sale.id) ? (
+                    <span className="text-[22px] font-black text-[#C45000] animate-in zoom-in-95">₹{sale.amount}</span>
+                  ) : (
+                    <div className="flex items-center gap-2 h-10 px-4 bg-slate-50 rounded-xl text-[10px] font-bold uppercase text-slate-400 border border-slate-100">
+                      <Eye size={14} /> Reveal
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

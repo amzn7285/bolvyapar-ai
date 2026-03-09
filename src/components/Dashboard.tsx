@@ -17,6 +17,7 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+const SALES_STORAGE_KEY = "bolvyapar_sales_history";
 const SNOOZE_KEY = "bolvyapar_lesson_snooze";
 const SNOOZE_DURATION = 3600000;
 
@@ -24,12 +25,37 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const [activeTab, setActiveTab] = useState("dukaan");
   const [privateMode, setPrivateMode] = useState(false);
   const [showCustomerView, setShowCustomerView] = useState(false);
+  const [sales, setSales] = useState<any[]>([]);
   const [lastTransaction, setLastTransaction] = useState<any>(null);
   const [currentLesson, setCurrentLesson] = useState<string | null>(null);
   const [showLessonCard, setShowLessonCard] = useState(false);
 
+  // Load sales from localStorage on mount
+  useEffect(() => {
+    const savedSales = localStorage.getItem(SALES_STORAGE_KEY);
+    if (savedSales) {
+      try {
+        setSales(JSON.parse(savedSales));
+      } catch (e) {
+        console.error("Failed to parse saved sales", e);
+      }
+    }
+  }, []);
+
   const handleTransaction = (details: any) => {
+    const newSale = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      item: details.productName || "Unknown Item",
+      qty: details.quantity ? `${details.quantity} ${details.unit || ''}` : "---",
+      customer: details.customerName || (language === 'hi-IN' ? 'ग्राहक' : 'Customer'),
+      amount: details.price || 0
+    };
+
+    const updatedSales = [newSale, ...sales];
+    setSales(updatedSales);
     setLastTransaction(details);
+    localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updatedSales));
   };
 
   const handleLessonGenerated = (lesson: string) => {
@@ -106,13 +132,13 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       <main className="flex-1 overflow-y-auto pb-48 pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
           <TabsContent value="dukaan" className="m-0 p-4">
-            <DukaanTab privateMode={privateMode} language={language} />
+            <DukaanTab privateMode={privateMode} language={language} sales={sales} />
           </TabsContent>
           <TabsContent value="stock" className="m-0 p-4">
             <StockTab language={language} />
           </TabsContent>
           <TabsContent value="report" className="m-0 p-4">
-            <ReportTab role={role} privateMode={privateMode} language={language} />
+            <ReportTab role={role} privateMode={privateMode} language={language} sales={sales} />
           </TabsContent>
           <TabsContent value="seekha" className="m-0 p-4">
             <SeekhaTab language={language} />

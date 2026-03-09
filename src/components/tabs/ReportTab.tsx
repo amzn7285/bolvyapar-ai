@@ -10,14 +10,25 @@ interface ReportTabProps {
   role: "owner" | "helper";
   privateMode: boolean;
   language: "hi-IN" | "en-IN";
+  sales: any[];
 }
 
-export default function ReportTab({ language, privateMode }: ReportTabProps) {
+export default function ReportTab({ language, privateMode, sales }: ReportTabProps) {
   const [isLocked, setIsLocked] = useState(true);
   const [pin, setPin] = useState("");
   const [revealMargin, setRevealMargin] = useState(false);
   const [error, setError] = useState(false);
   const { toast } = useToast();
+
+  // Calculate stats from actual sales
+  const totalRevenue = sales.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  
+  // Find top product
+  const productCounts: Record<string, number> = {};
+  sales.forEach(s => {
+    productCounts[s.item] = (productCounts[s.item] || 0) + 1;
+  });
+  const bestProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "---";
 
   const handlePinDigit = (digit: string) => {
     if (pin.length >= 4) return;
@@ -92,7 +103,7 @@ export default function ReportTab({ language, privateMode }: ReportTabProps) {
         <CardContent className="p-8 relative">
           <TrendingUp size={80} className="absolute right-[-10px] bottom-[-10px] text-white/5" />
           <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">{texts.revenue}</p>
-          <p className={cn("text-[26px] font-black text-white", privateMode && "blur-xl")}>₹24,500</p>
+          <p className={cn("text-[26px] font-black text-white", privateMode && "blur-xl")}>₹{totalRevenue.toLocaleString()}</p>
         </CardContent>
       </Card>
 
@@ -100,7 +111,7 @@ export default function ReportTab({ language, privateMode }: ReportTabProps) {
         <Card className="rounded-[24px] border-slate-100 shadow-sm bg-white">
           <CardContent className="p-5">
             <p className="text-[10px] font-bold uppercase text-slate-400 mb-2">{texts.bestProduct}</p>
-            <p className="text-[22px] font-black text-slate-900">Grains 🌾</p>
+            <p className="text-[22px] font-black text-slate-900 truncate">{bestProduct}</p>
           </CardContent>
         </Card>
         <Card className="rounded-[24px] border-slate-100 shadow-sm bg-white">
@@ -123,14 +134,18 @@ export default function ReportTab({ language, privateMode }: ReportTabProps) {
               <div className="text-3xl">👥</div>
               <div className="space-y-1">
                 <p className="text-[10px] font-bold uppercase text-slate-400">Customer Trend</p>
-                <p className="text-sm font-bold text-slate-700 leading-tight">Customers buy milk most at 9 AM.</p>
+                <p className="text-sm font-bold text-slate-700 leading-tight">
+                  {sales.length > 5 ? "Most customers visit in the morning hours." : "Keep recording sales for insights."}
+                </p>
               </div>
             </div>
             <div className="p-5 bg-[#1A6B3C]/5 border border-[#1A6B3C]/10 rounded-2xl flex gap-4">
               <div className="text-3xl">💡</div>
               <div className="space-y-1">
                 <p className="text-[10px] font-bold uppercase text-[#1A6B3C]">Business Tip</p>
-                <p className="text-sm font-black text-slate-800">Run an offer on Soaps next week!</p>
+                <p className="text-sm font-black text-slate-800">
+                  {sales.length > 0 ? `Your ${bestProduct} is popular! Stock more for tomorrow.` : "Record a sale to get a tip!"}
+                </p>
               </div>
             </div>
           </CardContent>
