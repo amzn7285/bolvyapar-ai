@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, UserSquare2, MessageCircle, X, Sparkles, Share2 } from "lucide-react";
+import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, UserSquare2, MessageCircle, X, Sparkles, Share2, ShieldAlert } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
 import ReportTab from "./tabs/ReportTab";
@@ -51,6 +51,8 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const [summaryModal, setSummaryModal] = useState<{ show: boolean, text: string, whatsappUrl: string } | null>(null);
   const [lastTransaction, setLastTransaction] = useState<any>(null);
 
+  const isHelper = role === "helper";
+
   useEffect(() => {
     const savedSales = localStorage.getItem(SALES_STORAGE_KEY);
     if (savedSales) {
@@ -79,6 +81,10 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   }, []);
 
   const handleTransaction = (details: any) => {
+    if (isHelper && (details.isExpense || details.isCredit || details.isPayment || details.isNewCustomer)) {
+      return; // Helper can only log sales
+    }
+
     const timestamp = new Date().toISOString();
     setLastTransaction({ ...details, timestamp });
     
@@ -188,7 +194,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   };
 
   const handleDailySummary = async () => {
-    if (isGeneratingSummary) return;
+    if (isGeneratingSummary || isHelper) return;
     setIsGeneratingSummary(true);
 
     const today = new Date().toDateString();
@@ -268,7 +274,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       setSummaryModal({ show: true, text, whatsappUrl });
     } catch (err) {
       console.error(err);
-      // Show offline fallback if summary fails
       const shareMsg = language === 'hi-IN' 
         ? `📊 *आज का हिसाब (ऑफलाइन)*\n✅ ${salesCount} ${term}\n_BolVyapar AI_`
         : `📊 *Daily Summary (Offline)*\n✅ ${salesCount} ${term}\n_BolVyapar AI_`;
@@ -287,8 +292,8 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const bizInfo = BUSINESS_TYPES.find(b => b.id === profile?.businessType) || BUSINESS_TYPES[0];
 
   const texts = {
-    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", khata: "खाता", report: "रिपोर्ट", customer: "ग्राहक व्यू", share: "WhatsApp पर शेयर करें" },
-    "en-IN": { dukaan: "Home", stock: "Stock", khata: "Khata", report: "Report", customer: "Customer View", share: "Share on WhatsApp" }
+    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", khata: "खाता", report: "रिपोर्ट", customer: "ग्राहक व्यू", share: "WhatsApp पर शेयर करें", helperMode: "हेल्पर मोड - सीमित एक्सेस" },
+    "en-IN": { dukaan: "Home", stock: "Stock", khata: "Khata", report: "Report", customer: "Customer View", share: "Share on WhatsApp", helperMode: "Helper Mode - Limited Access" }
   }[language];
 
   if (isCustomerView) {
@@ -298,6 +303,13 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   return (
     <div className="flex flex-col h-full bg-[#F8FAFC] relative overflow-hidden">
       <ConnectivityBanner language={language} />
+      
+      {isHelper && (
+        <div className="bg-[#C45000] text-white px-4 py-1.5 flex items-center justify-center gap-2 z-[100] shadow-md">
+          <ShieldAlert size={14} className="animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-widest">{texts.helperMode}</span>
+        </div>
+      )}
       
       <header className="bg-[#0D2240] px-6 py-4 flex items-center justify-between shadow-2xl z-20 shrink-0 border-b border-white/5">
         <div className="flex flex-col">
@@ -311,15 +323,17 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setPrivateMode(!privateMode)}
-            className={cn(
-              "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
-              privateMode ? 'bg-[#C45000] text-white' : 'bg-white/5 text-white/40'
-            )}
-          >
-            {privateMode ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+          {!isHelper && (
+            <button 
+              onClick={() => setPrivateMode(!privateMode)}
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
+                privateMode ? 'bg-[#C45000] text-white' : 'bg-white/5 text-white/40'
+              )}
+            >
+              {privateMode ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          )}
           <button onClick={onLogout} className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40">
             <Lock size={18} />
           </button>
@@ -330,6 +344,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
           <TabsContent value="dukaan" className="m-0 p-4">
             <DukaanTab 
+              role={role}
               privateMode={privateMode} 
               language={language} 
               sales={sales} 
@@ -341,46 +356,52 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
             />
           </TabsContent>
           <TabsContent value="stock" className="m-0 p-4">
-            <StockTab language={language} stock={stock} onAddCategory={(cat) => setStock([...stock, cat])} sales={sales} profile={profile} />
+            <StockTab role={role} language={language} stock={stock} onAddCategory={(cat) => setStock([...stock, cat])} sales={sales} profile={profile} />
           </TabsContent>
-          <TabsContent value="khata" className="m-0 p-4">
-            <CreditKhataTab language={language} customers={creditKhata} onUpdateCustomers={(k) => { setCreditKhata(k); localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(k)); }} profile={profile} sales={sales} />
-          </TabsContent>
-          <TabsContent value="report" className="m-0 p-4">
-            <ReportTab role={role} privateMode={privateMode} language={language} sales={sales} expenses={expenses} profile={profile} />
-          </TabsContent>
-          <TabsContent value="settings" className="m-0 p-4">
-            <SettingsTab language={language} profile={profile} onUpdateProfile={(p) => setProfile(p)} />
-          </TabsContent>
+          {!isHelper && (
+            <>
+              <TabsContent value="khata" className="m-0 p-4">
+                <CreditKhataTab language={language} customers={creditKhata} onUpdateCustomers={(k) => { setCreditKhata(k); localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(k)); }} profile={profile} sales={sales} />
+              </TabsContent>
+              <TabsContent value="report" className="m-0 p-4">
+                <ReportTab role={role} privateMode={privateMode} language={language} sales={sales} expenses={expenses} profile={profile} />
+              </TabsContent>
+              <TabsContent value="settings" className="m-0 p-4">
+                <SettingsTab language={language} profile={profile} onUpdateProfile={(p) => setProfile(p)} />
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </main>
 
-      <Dialog open={!!summaryModal} onOpenChange={() => setSummaryModal(null)}>
-        <DialogContent className="max-w-[90vw] rounded-[40px] p-0 border-none bg-white overflow-hidden shadow-2xl">
-          <div className="bg-[#0D2240] p-8 text-white relative overflow-hidden">
-            <Sparkles size={80} className="absolute right-[-10px] top-[-10px] text-white/5" />
-            <button onClick={() => setSummaryModal(null)} className="absolute right-4 top-4 text-white/40"><X size={24} /></button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-12 w-12 rounded-2xl bg-[#C45000] flex items-center justify-center text-2xl">📊</div>
-              <h2 className="text-2xl font-black uppercase tracking-tight">{language === 'hi-IN' ? 'आज का हिसाब' : "Today's Summary"}</h2>
+      {!isHelper && (
+        <Dialog open={!!summaryModal} onOpenChange={() => setSummaryModal(null)}>
+          <DialogContent className="max-w-[90vw] rounded-[40px] p-0 border-none bg-white overflow-hidden shadow-2xl">
+            <div className="bg-[#0D2240] p-8 text-white relative overflow-hidden">
+              <Sparkles size={80} className="absolute right-[-10px] top-[-10px] text-white/5" />
+              <button onClick={() => setSummaryModal(null)} className="absolute right-4 top-4 text-white/40"><X size={24} /></button>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-2xl bg-[#C45000] flex items-center justify-center text-2xl">📊</div>
+                <h2 className="text-2xl font-black uppercase tracking-tight">{language === 'hi-IN' ? 'आज का हिसाब' : "Today's Summary"}</h2>
+              </div>
+              <p className="text-white/80 leading-relaxed font-medium text-lg italic">{summaryModal?.text}</p>
             </div>
-            <p className="text-white/80 leading-relaxed font-medium text-lg italic">{summaryModal?.text}</p>
-          </div>
-          <div className="p-8 bg-slate-50">
-            <a 
-              href={summaryModal?.whatsappUrl} 
-              target="_blank" 
-              className="w-full h-16 rounded-[24px] bg-[#1A6B3C] text-white flex items-center justify-center gap-3 text-lg font-black uppercase shadow-xl shadow-[#1A6B3C]/20 active:scale-95 transition-all"
-            >
-              <MessageCircle size={24} />
-              {texts.share}
-            </a>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="p-8 bg-slate-50">
+              <a 
+                href={summaryModal?.whatsappUrl} 
+                target="_blank" 
+                className="w-full h-16 rounded-[24px] bg-[#1A6B3C] text-white flex items-center justify-center gap-3 text-lg font-black uppercase shadow-xl shadow-[#1A6B3C]/20 active:scale-95 transition-all"
+              >
+                <MessageCircle size={24} />
+                {texts.share}
+              </a>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 pb-safe z-[60] shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-        <div className="flex justify-between items-center max-w-md mx-auto relative h-16">
+        <div className="flex justify-around items-center max-w-md mx-auto relative h-16">
           <NavBtn icon={<Home size={22} />} label={texts.dukaan} active={activeTab === 'dukaan'} onClick={() => setActiveTab('dukaan')} />
           <NavBtn 
             icon={<Package size={22} />} 
@@ -392,6 +413,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
           
           <div className="relative -top-8 flex flex-col items-center">
             <VoiceButton 
+              role={role}
               language={language} 
               privateMode={privateMode} 
               onTransactionSuccess={handleTransaction} 
@@ -404,9 +426,11 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
             />
           </div>
 
-          <NavBtn icon={<BookOpen size={22} />} label={texts.khata} active={activeTab === 'khata'} onClick={() => setActiveTab('khata')} />
-          {role === 'owner' && (
-            <NavBtn icon={<BarChart3 size={22} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} />
+          {!isHelper && (
+            <>
+              <NavBtn icon={<BookOpen size={22} />} label={texts.khata} active={activeTab === 'khata'} onClick={() => setActiveTab('khata')} />
+              <NavBtn icon={<BarChart3 size={22} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} />
+            </>
           )}
           <NavBtn icon={<UserSquare2 size={22} />} label={texts.customer} active={isCustomerView} onClick={() => setIsCustomerView(true)} />
         </div>

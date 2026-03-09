@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface StockTabProps {
+  role: "owner" | "helper";
   language: "hi-IN" | "en-IN";
   stock: any[];
   onAddCategory: (category: any) => void;
@@ -18,13 +19,14 @@ interface StockTabProps {
   profile: any;
 }
 
-export default function StockTab({ language, stock, onAddCategory, sales, profile }: StockTabProps) {
+export default function StockTab({ role, language, stock, onAddCategory, sales, profile }: StockTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [tempResult, setTempResult] = useState<any>(null);
   const { toast } = useToast();
 
+  const isHelper = role === "helper";
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
   };
 
   const handleVoiceAdd = async (query: string) => {
+    if (isHelper) return;
     setIsProcessing(true);
     try {
       const systemPrompt = `Parse voice to create a new stock category. 
@@ -79,6 +82,7 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
   };
 
   const confirmAdd = () => {
+    if (isHelper) return;
     onAddCategory({
       ...tempResult,
       id: Date.now(),
@@ -114,6 +118,7 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
   };
 
   const handleOrderStock = (item: any) => {
+    if (isHelper) return;
     if (!profile?.supplierPhone) {
       toast({
         variant: "destructive",
@@ -123,7 +128,6 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
       return;
     }
 
-    // Calculate 7 day average
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
@@ -138,7 +142,6 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
     }, 0);
 
     const avgDaily = totalSold / 7;
-    // Suggested reorder is 10 days of stock (avgDaily * 10) or original maxQty if no sales
     let suggestedQty = Math.ceil(avgDaily * 10);
     if (suggestedQty === 0) suggestedQty = item.maxQty || 10;
 
@@ -191,59 +194,61 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
       <div className="flex justify-between items-center px-1">
         <h3 className="text-2xl font-black text-slate-900 tracking-tight">{texts.title}</h3>
         
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setTempResult(null);
-        }}>
-          <DialogTrigger asChild>
-            <button className="h-14 px-6 bg-[#C45000] text-white rounded-[24px] flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-[#C45000]/20 active:scale-95 transition-all">
-              <Plus size={20} /> {texts.addBtn}
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-[95vw] rounded-[40px] p-8 border-none shadow-2xl bg-[#0D2240] text-white">
-            <div className="flex flex-col items-center text-center space-y-8">
-              {!tempResult ? (
-                <>
-                  <div className="space-y-2">
-                    <h2 className="text-3xl font-black">{texts.addBtn}</h2>
-                    <p className="text-white/60">{texts.voiceInstr}</p>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setIsListening(true);
-                      recognitionRef.current?.start();
-                    }}
-                    disabled={isProcessing}
-                    className={cn(
-                      "h-32 w-32 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90",
-                      isListening ? "bg-red-500 animate-pulse" : "bg-[#C45000]",
-                      isProcessing && "bg-slate-600"
-                    )}
-                  >
-                    {isProcessing ? <Loader2 className="animate-spin" size={48} /> : <Mic size={48} />}
-                  </button>
-                  <p className="text-white/40 text-sm italic">{texts.example}</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-7xl mb-2">{tempResult.emoji}</div>
-                  <div className="space-y-2">
-                    <h2 className="text-4xl font-black">{language === 'hi-IN' ? tempResult.hiName : tempResult.name}</h2>
-                    <p className="text-2xl font-bold text-[#FFB300]">{tempResult.qty} {tempResult.unit} • ₹{tempResult.price}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 w-full pt-4">
-                    <Button onClick={() => setTempResult(null)} variant="outline" className="h-20 rounded-3xl border-white/10 bg-white/5 text-white text-xl font-black">
-                      <X size={24} className="mr-2" /> {texts.cancel}
-                    </Button>
-                    <Button onClick={confirmAdd} className="h-20 rounded-3xl bg-emerald-500 text-white text-xl font-black hover:bg-emerald-600 shadow-xl shadow-emerald-500/20">
-                      <CheckCircle2 size={24} className="mr-2" /> {texts.confirm}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {!isHelper && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setTempResult(null);
+          }}>
+            <DialogTrigger asChild>
+              <button className="h-14 px-6 bg-[#C45000] text-white rounded-[24px] flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-[#C45000]/20 active:scale-95 transition-all">
+                <Plus size={20} /> {texts.addBtn}
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] rounded-[40px] p-8 border-none shadow-2xl bg-[#0D2240] text-white">
+              <div className="flex flex-col items-center text-center space-y-8">
+                {!tempResult ? (
+                  <>
+                    <div className="space-y-2">
+                      <h2 className="text-3xl font-black">{texts.addBtn}</h2>
+                      <p className="text-white/60">{texts.voiceInstr}</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setIsListening(true);
+                        recognitionRef.current?.start();
+                      }}
+                      disabled={isProcessing}
+                      className={cn(
+                        "h-32 w-32 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90",
+                        isListening ? "bg-red-500 animate-pulse" : "bg-[#C45000]",
+                        isProcessing && "bg-slate-600"
+                      )}
+                    >
+                      {isProcessing ? <Loader2 className="animate-spin" size={48} /> : <Mic size={48} />}
+                    </button>
+                    <p className="text-white/40 text-sm italic">{texts.example}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-7xl mb-2">{tempResult.emoji}</div>
+                    <div className="space-y-2">
+                      <h2 className="text-4xl font-black">{language === 'hi-IN' ? tempResult.hiName : tempResult.name}</h2>
+                      <p className="text-2xl font-bold text-[#FFB300]">{tempResult.qty} {tempResult.unit} • ₹{tempResult.price}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 w-full pt-4">
+                      <Button onClick={() => setTempResult(null)} variant="outline" className="h-20 rounded-3xl border-white/10 bg-white/5 text-white text-xl font-black">
+                        <X size={24} className="mr-2" /> {texts.cancel}
+                      </Button>
+                      <Button onClick={confirmAdd} className="h-20 rounded-3xl bg-emerald-500 text-white text-xl font-black hover:bg-emerald-600 shadow-xl shadow-emerald-500/20">
+                        <CheckCircle2 size={24} className="mr-2" /> {texts.confirm}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -281,6 +286,12 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
                     </div>
                   </div>
 
+                  {!isHelper && (
+                    <div className="text-xl font-black text-slate-300">
+                      ₹{item.price}
+                    </div>
+                  )}
+
                   <div className="w-full space-y-4">
                     <Progress 
                       value={item.level} 
@@ -295,7 +306,7 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                  <div className={cn("grid gap-4 w-full", isRed && !isHelper ? "grid-cols-2" : "grid-cols-1")}>
                     <button 
                       onClick={() => speakStockStatus(item)}
                       className={cn(
@@ -307,7 +318,7 @@ export default function StockTab({ language, stock, onAddCategory, sales, profil
                       <span className="text-xl font-black uppercase tracking-widest">{language === 'hi-IN' ? 'सुनो' : 'Listen'}</span>
                     </button>
 
-                    {isRed && (
+                    {isRed && !isHelper && (
                       <button 
                         onClick={() => handleOrderStock(item)}
                         className="w-full h-20 rounded-[30px] bg-[#1A6B3C] text-white flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-[#1A6B3C]/20"

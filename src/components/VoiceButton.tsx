@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface VoiceButtonProps {
+  role: "owner" | "helper";
   language: "hi-IN" | "en-IN";
   privateMode: boolean;
   onTransactionSuccess: (details: any) => void;
@@ -22,6 +23,7 @@ interface VoiceButtonProps {
 const MAPPINGS_KEY = "bolvyapar_product_mappings";
 
 export default function VoiceButton({
+  role,
   language,
   privateMode,
   onTransactionSuccess,
@@ -45,6 +47,7 @@ export default function VoiceButton({
   const [clarificationType, setClarificationType] = useState<'stock' | 'expense' | null>(null);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
 
+  const isHelper = role === "helper";
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -105,12 +108,14 @@ export default function VoiceButton({
     const khataNames = khata.map(c => c.name).join(", ");
     
     return `You are BolVyapar AI. Parse voice input.
-    INTENTS: Sale, Expense, Credit, Payment, AddCustomer.
+    INTENTS: Sale ${isHelper ? '' : ', Expense, Credit, Payment, AddCustomer'}.
+    - Sale: Extract 'productName', 'quantity', 'price'.
+    ${!isHelper ? `
     - AddCustomer: Extract 'customerName' and 'customerPhone'.
     - Credit: Extract 'customerName', 'price' (amount), 'productName'.
     - Payment: Extract 'customerName', 'price' (amount received).
-    - Sale: Extract 'productName', 'quantity', 'price'.
     - Expense: Extract 'price' (amount). If product/reason is mentioned, extract 'productName'. 
+    ` : ''}
     
     CONTEXT:
     Business Type: ${businessType}
@@ -139,9 +144,7 @@ export default function VoiceButton({
     if (!query.trim()) return;
     setIsProcessing(true);
 
-    // Check if offline
     if (!navigator.onLine) {
-      // Offline fallback: Save as generic sale without AI response
       const fallbackTxn = {
         spokenResponse: language === "hi-IN" ? "ऑफलाइन सुरक्षित किया गया" : "Saved Offline",
         productName: query,
@@ -176,6 +179,11 @@ export default function VoiceButton({
   };
 
   const handleTransactionResult = (txn: any) => {
+    if (isHelper && (txn.isExpense || txn.isCredit || txn.isPayment || txn.isNewCustomer)) {
+      speak(language === "hi-IN" ? "माफ कीजिये, आप सिर्फ बिक्री लिख सकते हैं।" : "Sorry, you can only log sales.");
+      return;
+    }
+
     if (txn.isExpense) {
       setPendingTxn(txn);
       setIsAskingClarification(true);
@@ -265,7 +273,6 @@ export default function VoiceButton({
 
   const finalizeTransaction = (txn: any) => {
     setPendingTxn(txn);
-    // Only speak confirmation if online, otherwise just show UI
     if (navigator.onLine) {
       speak(txn.spokenResponse);
     }
@@ -324,7 +331,9 @@ export default function VoiceButton({
             </div>
 
             <div className="flex flex-col items-center gap-2">
-              <div className="text-5xl font-black text-secondary">₹{pendingTxn.price || '---'}</div>
+              {!isHelper && (
+                <div className="text-5xl font-black text-secondary">₹{pendingTxn.price || '---'}</div>
+              )}
               <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-secondary transition-all duration-1000 ease-linear"
@@ -358,7 +367,7 @@ export default function VoiceButton({
             <h3 className="text-[10px] font-black text-[#C45000] uppercase tracking-[0.2em]">{language === "hi-IN" ? "लिख कर बताएं" : "Type Command"}</h3>
             <button onClick={() => setShowTextInput(false)} className="text-slate-400 p-2"><X size={20} /></button>
           </div>
-          <Input value={textQuery} onChange={(e) => setTextQuery(e.target.value)} placeholder={language === "hi-IN" ? "जैसे: रमेश को 200 का उधार दिया..." : "e.g. Give 200 credit to Ramesh..."} className="h-14 text-sm rounded-2xl bg-slate-50 border-slate-100" />
+          <Input value={textQuery} onChange={(e) => setTextQuery(e.target.value)} placeholder={language === "hi-IN" ? (isHelper ? "जैसे: 2 किलो चावल बेचा..." : "जैसे: रमेश को 200 का उधार दिया...") : (isHelper ? "e.g. Sold 2kg rice..." : "e.g. Give 200 credit to Ramesh...")} className="h-14 text-sm rounded-2xl bg-slate-50 border-slate-100" />
           <Button onClick={() => processQuery(textQuery)} disabled={isProcessing || !textQuery.trim()} className="w-full h-14 rounded-2xl bg-[#C45000] text-white font-bold">{isProcessing ? <Loader2 className="animate-spin" /> : "Send"}</Button>
         </div>
       </div>
