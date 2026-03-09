@@ -298,7 +298,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const bizInfo = BUSINESS_TYPES.find(b => b.id === profile?.businessType) || BUSINESS_TYPES[0];
 
   const texts = {
-    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", khata: "खाता", report: "रिपोर्ट", activity: bizInfo.isService ? "ऑर्डर" : "हिसाब", share: "WhatsApp पर भेजें", tagline: "बोलकर चलाओ AI से कारोबार — बोलकर चलाओ AI से कारोबार" },
+    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", khata: "खाता", report: "रिपोर्ट", activity: bizInfo.isService ? "ऑर्डर" : "हिसाब", share: "WhatsApp पर भेजें", tagline: "Bolkar Chalao AI Se Karobaar — बोलकर चलाओ AI से कारोबार" },
     "en-IN": { dukaan: "Dukaan", stock: "Stock", khata: "Khata", report: "Report", activity: bizInfo.isService ? "Orders" : "History", share: "Share on WhatsApp", tagline: "Bolkar Chalao AI Se Karobaar — बोलकर चलाओ AI से कारोबार" }
   }[language];
 
@@ -315,6 +315,10 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       
       <header className="bg-[#0D2240] px-6 py-5 flex items-center justify-between shadow-xl z-20 shrink-0 border-b border-white/5">
         <div className="flex flex-col">
+          <div className="flex items-center gap-1.5 mb-1 opacity-80">
+             <span className="text-[#38BDF8] font-black text-[10px] uppercase tracking-tighter">BolVyapar</span>
+             <span className="text-[#FFB300] font-black text-[10px]">AI</span>
+          </div>
           <h1 className="text-xl font-black text-white tracking-tight truncate max-w-[180px]">
             {profile?.shopName || 'BolVyapar Shop'}
           </h1>
