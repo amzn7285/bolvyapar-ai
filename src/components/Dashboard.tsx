@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, UserSquare2 } from "lucide-react";
+import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, UserSquare2, Wallet } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
 import ReportTab from "./tabs/ReportTab";
@@ -79,6 +79,23 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     const timestamp = new Date().toISOString();
     setLastTransaction({ ...details, timestamp });
     
+    // 1. Handle New Customer Addition
+    if (details.isNewCustomer) {
+      const newEntry = {
+        id: Date.now(),
+        name: details.customerName,
+        phone: details.customerPhone || "",
+        balance: 0,
+        history: [],
+        lastPaymentAt: null
+      };
+      const updated = [...creditKhata, newEntry];
+      setCreditKhata(updated);
+      localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(updated));
+      return;
+    }
+
+    // 2. Handle Expense
     if (details.isExpense) {
       const newExpense = {
         id: Date.now(),
@@ -92,10 +109,17 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       return;
     }
 
+    // 3. Handle Credit Giving
     if (details.isCredit) {
       const updatedKhata = creditKhata.map(c => {
         if (c.name.toLowerCase() === details.customerName?.toLowerCase()) {
-          const entry = { id: Date.now(), timestamp, type: 'credit', amount: details.price || 0, note: details.productName || '' };
+          const entry = { 
+            id: Date.now(), 
+            timestamp, 
+            type: 'credit', 
+            amount: details.price || 0, 
+            note: details.productName || (language === 'hi-IN' ? 'उधार' : 'Credit') 
+          };
           return { ...c, balance: (c.balance || 0) + (details.price || 0), history: [entry, ...(c.history || [])] };
         }
         return c;
@@ -104,11 +128,23 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(updatedKhata));
     }
 
+    // 4. Handle Payment Received
     if (details.isPayment) {
       const updatedKhata = creditKhata.map(c => {
         if (c.name.toLowerCase() === details.customerName?.toLowerCase()) {
-          const entry = { id: Date.now(), timestamp, type: 'payment', amount: details.price || 0, note: 'Received payment' };
-          return { ...c, balance: Math.max(0, (c.balance || 0) - (details.price || 0)), history: [entry, ...(c.history || [])] };
+          const entry = { 
+            id: Date.now(), 
+            timestamp, 
+            type: 'payment', 
+            amount: details.price || 0, 
+            note: language === 'hi-IN' ? 'जमा' : 'Received payment' 
+          };
+          return { 
+            ...c, 
+            balance: Math.max(0, (c.balance || 0) - (details.price || 0)), 
+            history: [entry, ...(c.history || [])],
+            lastPaymentAt: timestamp
+          };
         }
         return c;
       });
@@ -117,6 +153,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       return;
     }
 
+    // 5. Normal Sale
     const newSale = {
       id: Date.now(),
       timestamp,
@@ -131,18 +168,16 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     setSales(updatedSales);
     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updatedSales));
 
+    // Update Stock
     const soldQty = Number(details.quantity) || 0;
     const prodName = (details.productName || "").toLowerCase();
-
     const updatedStock = stock.map(item => {
       let isMatch = false;
       const itemName = item.name.toLowerCase();
       const itemHiName = (item.hiName || "").toLowerCase();
-
       if (prodName.includes(itemName) || prodName.includes(itemHiName) || details.matchedCategory === item.name) {
         isMatch = true;
       }
-
       if (isMatch) {
         const newQty = Math.max(0, item.qty - soldQty);
         const maxQty = item.maxQty || 100;
@@ -151,7 +186,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       }
       return item;
     });
-
     setStock(updatedStock);
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(updatedStock));
   };
@@ -252,7 +286,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
             <StockTab language={language} stock={stock} onAddCategory={(cat) => setStock([...stock, cat])} sales={sales} profile={profile} />
           </TabsContent>
           <TabsContent value="khata" className="m-0 p-4">
-            <CreditKhataTab language={language} customers={creditKhata} onUpdateCustomers={handleUpdateKhata} profile={profile} />
+            <CreditKhataTab language={language} customers={creditKhata} onUpdateCustomers={handleUpdateKhata} profile={profile} sales={sales} />
           </TabsContent>
           <TabsContent value="report" className="m-0 p-4">
             <ReportTab role={role} privateMode={privateMode} language={language} sales={sales} expenses={expenses} profile={profile} />
@@ -284,14 +318,15 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
               businessType={profile?.businessType}
               stock={stock}
               compact
+              khata={creditKhata}
             />
           </div>
 
           <NavBtn icon={<BookOpen size={22} />} label={texts.khata} active={activeTab === 'khata'} onClick={() => setActiveTab('khata')} />
-          <NavBtn icon={<UserSquare2 size={22} />} label={texts.customer} active={isCustomerView} onClick={() => setIsCustomerView(true)} />
           {role === 'owner' && (
             <NavBtn icon={<BarChart3 size={22} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} />
           )}
+          <NavBtn icon={<UserSquare2 size={22} />} label={texts.customer} active={isCustomerView} onClick={() => setIsCustomerView(true)} />
         </div>
       </nav>
     </div>

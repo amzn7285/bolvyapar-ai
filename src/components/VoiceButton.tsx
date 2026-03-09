@@ -16,6 +16,7 @@ interface VoiceButtonProps {
   compact?: boolean;
   businessType?: string;
   stock?: any[];
+  khata?: any[];
 }
 
 const MAPPINGS_KEY = "bolvyapar_product_mappings";
@@ -29,6 +30,7 @@ export default function VoiceButton({
   compact,
   businessType = "kirana",
   stock = [],
+  khata = [],
 }: VoiceButtonProps) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -36,18 +38,15 @@ export default function VoiceButton({
   const [textQuery, setTextQuery] = useState("");
   const [learnedMappings, setLearnedMappings] = useState<Record<string, { category: string, count: number }>>({});
   
-  // States for confirmation card & auto-confirm
   const [pendingTxn, setPendingTxn] = useState<any>(null);
   const [autoConfirmTimer, setAutoConfirmTimer] = useState<number | null>(null);
   
-  // State for clarifying question
   const [isAskingClarification, setIsAskingClarification] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Load learned mappings
     const saved = localStorage.getItem(MAPPINGS_KEY);
     if (saved) {
       try { setLearnedMappings(JSON.parse(saved)); } catch (e) { console.error(e); }
@@ -102,27 +101,20 @@ export default function VoiceButton({
 
   const getSystemPrompt = () => {
     const stockCategories = stock.map(s => s.name).join(", ");
-    let bizSpecifics = "";
-    switch (businessType) {
-      case 'tailor':
-        bizSpecifics = "For TAILORS: Map input to 'productName' (item), 'customerName', 'price' (advance amount), and 'metadata' containing 'deliveryDate' (date).";
-        break;
-      case 'repair':
-        bizSpecifics = "For REPAIR SHOPS: Map input to 'productName' (device), 'customerName', 'price' (estimated cost), and 'metadata' containing 'problem' (the issue).";
-        break;
-      case 'dhaba':
-        bizSpecifics = "For DHABA: Map input to 'productName' (items), 'price', and 'metadata' containing 'tableNumber'.";
-        break;
-      case 'milk':
-        bizSpecifics = "For MILK DELIVERY: Map input to 'customerName', 'quantity', and 'unit' (litres). Handle subscription updates.";
-        break;
-      default:
-        bizSpecifics = `For KIRANA: Map input to 'productName', 'quantity', 'unit', and 'price'. Existing categories: ${stockCategories}`;
-    }
-
+    const khataNames = khata.map(c => c.name).join(", ");
+    
     return `You are BolVyapar AI. Parse voice input.
-    INTENTS: Sale/Order, Expense, Credit, Payment.
-    ${bizSpecifics}
+    INTENTS: Sale, Expense, Credit, Payment, AddCustomer.
+    - AddCustomer: Extract 'customerName' and 'customerPhone'.
+    - Credit: Extract 'customerName', 'price' (amount), 'productName'.
+    - Payment: Extract 'customerName', 'price' (amount received).
+    - Sale: Extract 'productName', 'quantity', 'price'.
+    - Expense: Extract 'productName' (reason), 'price'.
+    
+    CONTEXT:
+    Existing Stock Categories: ${stockCategories}
+    Existing Credit Customers: ${khataNames}
+
     Return ONLY JSON:
     {
       "spokenResponse": "1-sentence confirmation",
@@ -130,10 +122,12 @@ export default function VoiceButton({
       "quantity": number,
       "unit": "kg/L/etc",
       "customerName": "Name",
+      "customerPhone": "Phone",
       "price": number,
       "isExpense": boolean,
       "isCredit": boolean,
       "isPayment": boolean,
+      "isNewCustomer": boolean,
       "suggestedCategory": "Stock Category Name based on fuzzy matching product",
       "confidence": number (0 to 1)
     }`;
@@ -165,17 +159,20 @@ export default function VoiceButton({
   };
 
   const handleTransactionResult = (txn: any) => {
+    if (txn.isNewCustomer || txn.isPayment || txn.isCredit || txn.isExpense) {
+      finalizeTransaction(txn);
+      return;
+    }
+
     const productName = txn.productName?.toLowerCase();
     const mapping = learnedMappings[productName];
 
-    // Case 1: Already learned permanently (count >= 3)
     if (mapping && mapping.count >= 3) {
       txn.matchedCategory = mapping.category;
       finalizeTransaction(txn);
       return;
     }
 
-    // Case 2: Low confidence or new mapping -> Clarify
     if (!mapping || txn.confidence < 0.7) {
       const categoryToAsk = mapping?.category || txn.suggestedCategory;
       if (categoryToAsk) {
@@ -186,13 +183,11 @@ export default function VoiceButton({
           ? `${txn.productName} ${categoryToAsk} में से गया क्या?` 
           : `Did ${txn.productName} come from ${categoryToAsk}?`;
         speak(question);
-        // Start listening for haan/nahin after speaking
         setTimeout(() => startListening(), 1500);
       } else {
         finalizeTransaction(txn);
       }
     } else {
-      // High confidence but not yet permanent
       txn.matchedCategory = mapping.category;
       finalizeTransaction(txn);
     }
@@ -224,7 +219,6 @@ export default function VoiceButton({
   const finalizeTransaction = (txn: any) => {
     setPendingTxn(txn);
     speak(txn.spokenResponse);
-    // Start auto-confirm timer
     let timeLeft = 5;
     setAutoConfirmTimer(timeLeft);
     const interval = setInterval(() => {
@@ -259,13 +253,20 @@ export default function VoiceButton({
           <div className="p-8 space-y-8">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="h-24 w-24 rounded-full bg-slate-50 flex items-center justify-center text-5xl">
-                {pendingTxn.suggestedCategory?.toLowerCase().includes('milk') ? '🥛' : 
-                 pendingTxn.suggestedCategory?.toLowerCase().includes('grain') ? '🌾' : '🛍️'}
+                {pendingTxn.isNewCustomer ? '👤' : 
+                 pendingTxn.isCredit ? '💸' : 
+                 pendingTxn.isPayment ? '💰' : 
+                 pendingTxn.isExpense ? '📉' : '🛍️'}
               </div>
               <div>
-                <h2 className="text-3xl font-black text-[#0D2240]">{pendingTxn.productName}</h2>
+                <h2 className="text-3xl font-black text-[#0D2240]">
+                  {pendingTxn.isNewCustomer ? pendingTxn.customerName : 
+                   pendingTxn.isCredit ? (language === 'hi-IN' ? 'उधार' : 'Credit') :
+                   pendingTxn.isPayment ? (language === 'hi-IN' ? 'जमा' : 'Payment') :
+                   pendingTxn.productName}
+                </h2>
                 <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">
-                  {pendingTxn.quantity} {pendingTxn.unit} • {pendingTxn.suggestedCategory}
+                  {pendingTxn.customerName} {pendingTxn.quantity ? `• ${pendingTxn.quantity} ${pendingTxn.unit}` : ''}
                 </p>
               </div>
             </div>
@@ -282,17 +283,11 @@ export default function VoiceButton({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={cancelTransaction}
-                className="h-20 rounded-3xl bg-red-50 text-red-600 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all border border-red-100"
-              >
+              <button onClick={cancelTransaction} className="h-20 rounded-3xl bg-red-50 text-red-600 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all border border-red-100">
                 <X size={24} />
                 <span className="text-[10px] font-black uppercase">{language === 'hi-IN' ? 'गलत' : 'Wrong'}</span>
               </button>
-              <button 
-                onClick={() => confirmTransaction(pendingTxn)}
-                className="h-20 rounded-3xl bg-secondary text-white flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-xl shadow-secondary/20"
-              >
+              <button onClick={() => confirmTransaction(pendingTxn)} className="h-20 rounded-3xl bg-secondary text-white flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-xl shadow-secondary/20">
                 <Check size={24} />
                 <span className="text-[10px] font-black uppercase">{language === 'hi-IN' ? 'सही है' : 'Sahi Hai'}</span>
               </button>

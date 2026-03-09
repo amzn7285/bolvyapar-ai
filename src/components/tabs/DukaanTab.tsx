@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -69,15 +70,30 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
 
   return (
     <div className="space-y-4">
-      <Card className="bg-amber-50 border-amber-200 rounded-2xl shadow-sm border">
-        <CardContent className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center text-amber-700">
-              <Wallet size={20} />
+      <Card className={cn(
+        "rounded-2xl shadow-sm border-2 transition-all",
+        totalOutstanding > 0 ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"
+      )}>
+        <CardContent className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm",
+              totalOutstanding > 0 ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"
+            )}>
+              <Wallet size={32} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">{texts.outstanding}</p>
-              <p className={cn("text-xl font-black text-amber-900 transition-all", privateMode && "blur-md")}>
+              <p className={cn(
+                "text-[10px] font-black uppercase tracking-widest mb-1",
+                totalOutstanding > 0 ? "text-red-500" : "text-emerald-500"
+              )}>
+                {texts.outstanding}
+              </p>
+              <p className={cn(
+                "text-3xl font-black transition-all",
+                totalOutstanding > 0 ? "text-red-700" : "text-emerald-700",
+                privateMode && "blur-md"
+              )}>
                 ₹{totalOutstanding.toLocaleString()}
               </p>
             </div>
@@ -85,15 +101,15 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
         </CardContent>
       </Card>
 
-      <Card className="bg-[#0D2240] border-none rounded-[24px] overflow-hidden shadow-xl">
-        <CardContent className="p-6 relative">
-          <TrendingUp size={80} className="absolute right-[-10px] bottom-[-10px] text-white/5 rotate-12" />
-          <div className="flex justify-between items-start mb-4">
+      <Card className="bg-[#0D2240] border-none rounded-[32px] overflow-hidden shadow-xl">
+        <CardContent className="p-8 relative">
+          <TrendingUp size={100} className="absolute right-[-20px] bottom-[-20px] text-white/5 rotate-12" />
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">{texts.todaySales}</p>
+              <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-2">{texts.todaySales}</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-bold text-[#C45000]">₹</span>
-                <span className={cn("text-[32px] font-black text-white transition-all", privateMode && "blur-xl")}>
+                <span className="text-2xl font-black text-[#C45000]">₹</span>
+                <span className={cn("text-5xl font-black text-white transition-all", privateMode && "blur-xl")}>
                   {totalAmount.toLocaleString()}
                 </span>
               </div>
@@ -101,26 +117,26 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
             <button 
               onClick={onGenerateSummary}
               disabled={isGeneratingSummary || count === 0}
-              className="flex items-center gap-2 px-3 py-2 bg-[#C45000] text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-[#C45000] text-white rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-xl active:scale-95 transition-all disabled:opacity-50"
             >
-              {isGeneratingSummary ? <Loader2 size={14} className="animate-spin" /> : <BarChart2 size={14} />}
+              {isGeneratingSummary ? <Loader2 size={16} className="animate-spin" /> : <BarChart2 size={16} />}
               {texts.summary}
             </button>
           </div>
-          <div className="inline-flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#1A6B3C]" />
-            <p className="text-white/60 font-bold text-xs">{count} {texts.txns}</p>
+          <div className="inline-flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
+            <div className="w-2 h-2 rounded-full bg-[#1A6B3C]" />
+            <p className="text-white/60 font-black text-sm">{count} {texts.txns}</p>
           </div>
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        <h3 className="text-slate-900 text-lg font-black tracking-tight">{texts.recentSales}</h3>
+      <div className="space-y-4 pt-2">
+        <h3 className="text-slate-900 text-xl font-black tracking-tight px-1">{texts.recentSales}</h3>
         <div className="space-y-2">
           {sales.length === 0 ? (
-            <div className="text-center py-12 opacity-40">
-              <span className="text-4xl block mb-2">📋</span>
-              <p className="text-sm font-bold">{texts.empty}</p>
+            <div className="text-center py-16 opacity-40">
+              <span className="text-6xl block mb-4">📋</span>
+              <p className="text-lg font-bold">{texts.empty}</p>
             </div>
           ) : (
             sales.slice(0, 10).map((sale) => (
@@ -131,24 +147,24 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
                   n.has(sale.id) ? n.delete(sale.id) : n.add(sale.id);
                   return n;
                 })}
-                className="bg-white border border-slate-100 p-3 rounded-xl flex items-center justify-between shadow-sm active:bg-slate-50 transition-all"
+                className="bg-white border border-slate-100 p-4 rounded-2xl flex items-center justify-between shadow-sm active:bg-slate-50 transition-all"
               >
-                <div className="flex gap-3 items-center">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-xl">
+                <div className="flex gap-4 items-center">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-2xl">
                     {getBizIcon()}
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-slate-800">{sale.item}</h4>
-                    <p className="text-[10px] text-slate-400 font-medium uppercase">
+                    <h4 className="font-bold text-base text-slate-800">{sale.item}</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">
                       {getTransactionLabel(sale)} • {sale.customer}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   {revealedSales.has(sale.id) ? (
-                    <span className="text-lg font-black text-[#C45000]">₹{sale.amount}</span>
+                    <span className="text-xl font-black text-[#C45000]">₹{sale.amount}</span>
                   ) : (
-                    <div className="text-[10px] font-bold text-slate-300 flex items-center gap-1"><Eye size={12} /> {texts.tapToReveal}</div>
+                    <div className="text-[10px] font-black text-slate-300 flex items-center gap-1 uppercase"><Eye size={12} /> {texts.tapToReveal}</div>
                   )}
                 </div>
               </div>
