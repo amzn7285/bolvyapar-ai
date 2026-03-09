@@ -12,6 +12,7 @@ interface VoiceButtonProps {
   onTransactionSuccess: (details: any) => void;
   onLessonGenerated: (lessonText: string) => void;
   onSummaryRequested?: () => void;
+  salesHistory?: any[];
   compact?: boolean;
 }
 
@@ -21,6 +22,7 @@ export default function VoiceButton({
   onTransactionSuccess,
   onLessonGenerated,
   onSummaryRequested,
+  salesHistory = [],
   compact,
 }: VoiceButtonProps) {
   const [isListening, setIsListening] = useState(false);
@@ -97,10 +99,25 @@ export default function VoiceButton({
 
     setIsProcessing(true);
     try {
+      // Create a context summary of recent sales for the AI
+      const recentCustomers = salesHistory.slice(0, 50).reduce((acc: any, sale: any) => {
+        if (sale.customer && sale.customer !== 'ग्राहक' && sale.customer !== 'Customer') {
+          acc[sale.customer] = (acc[sale.customer] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      const customerContext = Object.entries(recentCustomers)
+        .map(([name, count]) => `${name}: visited ${count} times`)
+        .join(', ');
+
       const systemPrompt = `You are BolVyapar AI. Parse voice input.
+CUSTOMER MEMORY:
+Recent History: ${customerContext || 'No history yet.'}
+If input contains a name, include one fun fact about them in 'spokenResponse' (e.g., "Ramesh today is your 3rd visit this week!").
 Return ONLY raw JSON:
 {
-  "spokenResponse": "1-sentence warm confirmation in ${language === 'hi-IN' ? 'Hindi' : 'English'}",
+  "spokenResponse": "1-2 sentence warm confirmation including customer fact if name found, in ${language === 'hi-IN' ? 'Hindi' : 'English'}",
   "productName": "Item or Expense name",
   "quantity": number,
   "unit": "kg/L/units/etc",

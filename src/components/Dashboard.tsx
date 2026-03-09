@@ -308,6 +308,7 @@ Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. Respond ONLY with the s
               onTransactionSuccess={handleTransaction} 
               onLessonGenerated={handleLessonGenerated}
               onSummaryRequested={handleDailySummary}
+              salesHistory={sales}
               compact
             />
           </div>
