@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -42,6 +41,7 @@ export default function VoiceButton({
   const [autoConfirmTimer, setAutoConfirmTimer] = useState<number | null>(null);
   
   const [isAskingClarification, setIsAskingClarification] = useState(false);
+  const [clarificationType, setClarificationType] = useState<'stock' | 'expense' | null>(null);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
@@ -109,9 +109,10 @@ export default function VoiceButton({
     - Credit: Extract 'customerName', 'price' (amount), 'productName'.
     - Payment: Extract 'customerName', 'price' (amount received).
     - Sale: Extract 'productName', 'quantity', 'price'.
-    - Expense: Extract 'productName' (reason), 'price'.
+    - Expense: Extract 'price' (amount). If product/reason is mentioned, extract 'productName'. 
     
     CONTEXT:
+    Business Type: ${businessType}
     Existing Stock Categories: ${stockCategories}
     Existing Credit Customers: ${khataNames}
 
@@ -159,7 +160,19 @@ export default function VoiceButton({
   };
 
   const handleTransactionResult = (txn: any) => {
-    if (txn.isNewCustomer || txn.isPayment || txn.isCredit || txn.isExpense) {
+    if (txn.isExpense) {
+      setPendingTxn(txn);
+      setIsAskingClarification(true);
+      setClarificationType('expense');
+      const question = language === "hi-IN" 
+        ? "स्टॉक खरीदा या और कुछ?" 
+        : "Stock purchase or something else?";
+      speak(question);
+      setTimeout(() => startListening(), 1500);
+      return;
+    }
+
+    if (txn.isNewCustomer || txn.isPayment || txn.isCredit) {
       finalizeTransaction(txn);
       return;
     }
@@ -179,6 +192,7 @@ export default function VoiceButton({
         setPendingTxn(txn);
         setSuggestedCategory(categoryToAsk);
         setIsAskingClarification(true);
+        setClarificationType('stock');
         const question = language === "hi-IN" 
           ? `${txn.productName} ${categoryToAsk} में से गया क्या?` 
           : `Did ${txn.productName} come from ${categoryToAsk}?`;
@@ -195,24 +209,41 @@ export default function VoiceButton({
 
   const handleClarificationResponse = (query: string) => {
     const resp = query.toLowerCase();
-    const isYes = resp.includes("haan") || resp.includes("han") || resp.includes("yes") || resp.includes("sahi");
     
-    if (isYes && pendingTxn && suggestedCategory) {
-      const productName = pendingTxn.productName?.toLowerCase();
-      const currentMapping = learnedMappings[productName] || { category: suggestedCategory, count: 0 };
-      const updatedMapping = { ...currentMapping, count: currentMapping.count + 1 };
+    if (clarificationType === 'expense' && pendingTxn) {
+      const isStock = resp.includes("stock") || resp.includes("haan") || resp.includes("han") || resp.includes("yes");
+      const isOther = resp.includes("nahin") || resp.includes("no") || resp.includes("kuch") || resp.includes("aur");
       
-      const newMappings = { ...learnedMappings, [productName]: updatedMapping };
-      setLearnedMappings(newMappings);
-      localStorage.setItem(MAPPINGS_KEY, JSON.stringify(newMappings));
-      
-      pendingTxn.matchedCategory = suggestedCategory;
-      finalizeTransaction(pendingTxn);
-    } else {
-      speak(language === "hi-IN" ? "माफ कीजिये, रद्द कर दिया।" : "Sorry, cancelled.");
+      if (isStock) {
+        let cat = "Stock Purchase";
+        if (businessType === 'tailor') cat = "Fabric Purchase";
+        if (businessType === 'repair') cat = "Parts Purchase";
+        pendingTxn.productName = cat;
+        finalizeTransaction(pendingTxn);
+      } else if (isOther) {
+        pendingTxn.productName = language === 'hi-IN' ? "अन्य खर्चा" : "Other Expense";
+        finalizeTransaction(pendingTxn);
+      } else {
+        speak(language === "hi-IN" ? "माफ कीजिये, रद्द कर दिया।" : "Sorry, cancelled.");
+      }
+    } else if (clarificationType === 'stock' && pendingTxn && suggestedCategory) {
+      const isYes = resp.includes("haan") || resp.includes("han") || resp.includes("yes") || resp.includes("sahi");
+      if (isYes) {
+        const productName = pendingTxn.productName?.toLowerCase();
+        const currentMapping = learnedMappings[productName] || { category: suggestedCategory, count: 0 };
+        const updatedMapping = { ...currentMapping, count: currentMapping.count + 1 };
+        const newMappings = { ...learnedMappings, [productName]: updatedMapping };
+        setLearnedMappings(newMappings);
+        localStorage.setItem(MAPPINGS_KEY, JSON.stringify(newMappings));
+        pendingTxn.matchedCategory = suggestedCategory;
+        finalizeTransaction(pendingTxn);
+      } else {
+        speak(language === "hi-IN" ? "माफ कीजिये, रद्द कर दिया।" : "Sorry, cancelled.");
+      }
     }
+
     setIsAskingClarification(false);
-    setPendingTxn(null);
+    setClarificationType(null);
     setSuggestedCategory(null);
   };
 
@@ -322,7 +353,7 @@ export default function VoiceButton({
         <button onClick={() => setShowTextInput(true)} className="h-12 w-12 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-slate-400 shadow-sm"><Keyboard size={20} /></button>
       </div>
       <p className="mt-2 text-[10px] font-black text-[#C45000] uppercase tracking-tighter">
-        {isListening ? (isAskingClarification ? "Haan ya Nahin?" : "सुन रहा हूँ...") : "बोलिए"}
+        {isListening ? (isAskingClarification ? "Hann ya Nahin?" : "सुन रहा हूँ...") : "बोलिए"}
       </p>
     </div>
   );

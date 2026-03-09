@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -79,7 +78,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     const timestamp = new Date().toISOString();
     setLastTransaction({ ...details, timestamp });
     
-    // 1. Handle New Customer Addition
     if (details.isNewCustomer) {
       const newEntry = {
         id: Date.now(),
@@ -95,7 +93,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       return;
     }
 
-    // 2. Handle Expense
     if (details.isExpense) {
       const newExpense = {
         id: Date.now(),
@@ -109,7 +106,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       return;
     }
 
-    // 3. Handle Credit Giving
     if (details.isCredit) {
       const updatedKhata = creditKhata.map(c => {
         if (c.name.toLowerCase() === details.customerName?.toLowerCase()) {
@@ -128,7 +124,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(updatedKhata));
     }
 
-    // 4. Handle Payment Received
     if (details.isPayment) {
       const updatedKhata = creditKhata.map(c => {
         if (c.name.toLowerCase() === details.customerName?.toLowerCase()) {
@@ -153,7 +148,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       return;
     }
 
-    // 5. Normal Sale
     const newSale = {
       id: Date.now(),
       timestamp,
@@ -168,7 +162,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     setSales(updatedSales);
     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updatedSales));
 
-    // Update Stock
     const soldQty = Number(details.quantity) || 0;
     const prodName = (details.productName || "").toLowerCase();
     const updatedStock = stock.map(item => {
@@ -190,21 +183,18 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(updatedStock));
   };
 
-  const handleUpdateKhata = (newKhata: any[]) => {
-    setCreditKhata(newKhata);
-    localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(newKhata));
-  };
-
   const handleDailySummary = async () => {
     if (isGeneratingSummary) return;
     setIsGeneratingSummary(true);
 
     const today = new Date().toDateString();
     const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today);
+    const todayExpenses = expenses.filter(e => new Date(e.timestamp).toDateString() === today);
     const totalSales = todaySales.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    const totalExp = todayExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
     
-    const systemPrompt = `Generate a 2-sentence summary of today's business. Total Sales: ₹${totalSales}. Business Type: ${profile?.businessType || 'General'}.
-    Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. NO Net Profit details.`;
+    const systemPrompt = `Generate a 2-sentence summary of today's business. Total Sales: ₹${totalSales}. Total Expenses: ₹${totalExp}. Business Type: ${profile?.businessType || 'General'}.
+    Language: ${language === 'hi-IN' ? 'Hindi' : 'English'}. NEVER mention Net Profit figures.`;
 
     try {
       const response = await fetch("/api/chat", {
@@ -228,7 +218,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
 
   const totalOutstanding = creditKhata.reduce((acc, curr) => acc + (curr.balance || 0), 0);
   const redItemsCount = stock.filter(item => item.level < 15).length;
-
   const bizInfo = BUSINESS_TYPES.find(b => b.id === profile?.businessType) || BUSINESS_TYPES[0];
 
   const texts = {
@@ -276,6 +265,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
               privateMode={privateMode} 
               language={language} 
               sales={sales} 
+              expenses={expenses}
               profile={profile}
               totalOutstanding={totalOutstanding}
               onGenerateSummary={handleDailySummary}
@@ -286,7 +276,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
             <StockTab language={language} stock={stock} onAddCategory={(cat) => setStock([...stock, cat])} sales={sales} profile={profile} />
           </TabsContent>
           <TabsContent value="khata" className="m-0 p-4">
-            <CreditKhataTab language={language} customers={creditKhata} onUpdateCustomers={handleUpdateKhata} profile={profile} sales={sales} />
+            <CreditKhataTab language={language} customers={creditKhata} onUpdateCustomers={(k) => { setCreditKhata(k); localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(k)); }} profile={profile} sales={sales} />
           </TabsContent>
           <TabsContent value="report" className="m-0 p-4">
             <ReportTab role={role} privateMode={privateMode} language={language} sales={sales} expenses={expenses} profile={profile} />

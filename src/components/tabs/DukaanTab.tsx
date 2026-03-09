@@ -1,32 +1,36 @@
-
 "use client";
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Eye, TrendingUp, BarChart2, Loader2, Wallet, Scissors, Wrench, Utensils, Truck, ShoppingBasket } from "lucide-react";
+import { Eye, TrendingUp, BarChart2, Loader2, Wallet, Scissors, Wrench, Utensils, Truck, ShoppingBasket, MinusCircle } from "lucide-react";
 
 interface DukaanTabProps {
   privateMode: boolean;
   language: "hi-IN" | "en-IN";
   sales: any[];
+  expenses: any[];
   profile: any;
   totalOutstanding: number;
   onGenerateSummary: () => void;
   isGeneratingSummary?: boolean;
 }
 
-export default function DukaanTab({ privateMode, language, sales, profile, totalOutstanding, onGenerateSummary, isGeneratingSummary }: DukaanTabProps) {
+export default function DukaanTab({ privateMode, language, sales, expenses, profile, totalOutstanding, onGenerateSummary, isGeneratingSummary }: DukaanTabProps) {
   const [revealedSales, setRevealedSales] = useState<Set<number>>(new Set());
   
   const today = new Date().toDateString();
   const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today);
+  const todayExpenses = expenses.filter(e => new Date(e.timestamp).toDateString() === today);
+  
   const totalAmount = todaySales.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalExp = todayExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
   const count = todaySales.length;
 
   const texts = {
     "hi-IN": {
-      todaySales: language === 'hi-IN' ? "आज की बिक्री" : "Today's Sales",
+      todaySales: "आज की बिक्री",
+      todayExp: "आज के खर्चे",
       recentSales: "हाल की गतिविधियां",
       outstanding: "उधार बाकी",
       txns: "लेन-देन",
@@ -35,7 +39,8 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
       summary: "आज का हिसाब"
     },
     "en-IN": {
-      todaySales: "Today's Activity",
+      todaySales: "Today's Sales",
+      todayExp: "Today's Expenses",
       recentSales: "Recent Activity",
       outstanding: "Total Outstanding",
       txns: "txns",
@@ -126,6 +131,22 @@ export default function DukaanTab({ privateMode, language, sales, profile, total
           <div className="inline-flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
             <div className="w-2 h-2 rounded-full bg-[#1A6B3C]" />
             <p className="text-white/60 font-black text-sm">{count} {texts.txns}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+        <CardContent className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+              <MinusCircle size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{texts.todayExp}</p>
+              <p className={cn("text-2xl font-black text-red-600 transition-all", privateMode && "blur-md")}>
+                ₹{totalExp.toLocaleString()}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
