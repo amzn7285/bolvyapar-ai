@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Store, User, Phone, ShoppingBasket, Scissors, Wrench, Utensils, Truck, Pill, Box, Mic, Loader2, CheckCircle2 } from "lucide-react";
+import { Store, Mic, Loader2, CheckCircle2, X, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FirstLaunchFlowProps {
@@ -29,6 +29,9 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
   const [step, setStep] = useState(1);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [micError, setMicError] = useState(false);
+  const [manualInput, setManualInput] = useState("");
   const [formData, setFormData] = useState({
     shopName: "",
     ownerPhone: "",
@@ -41,19 +44,40 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.lang = language;
-        recognition.onresult = (e: any) => {
-          const query = e.results[0][0].transcript;
-          handleVoiceAction(query);
+        recognition.interimResults = true;
+        
+        recognition.onstart = () => {
+          setIsListening(true);
+          setMicError(false);
         };
-        recognition.onend = () => setIsListening(false);
+
+        recognition.onresult = (e: any) => {
+          const current = e.results[0][0].transcript;
+          setTranscript(current);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+          if (transcript) {
+            handleVoiceAction(transcript);
+          }
+        };
+
+        recognition.onerror = () => {
+          setIsListening(false);
+          setMicError(true);
+        };
+
         recognitionRef.current = recognition;
+      } else {
+        setMicError(true);
       }
     }
-  }, [language, step]);
+  }, [language, step, transcript]);
 
   const speak = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -63,12 +87,20 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
   };
 
   const startListening = () => {
-    if (isListening) return;
-    setIsListening(true);
-    recognitionRef.current?.start();
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    setTranscript("");
+    try {
+      recognitionRef.current?.start();
+    } catch (e) {
+      setMicError(true);
+    }
   };
 
   const handleVoiceAction = async (query: string) => {
+    if (!query.trim()) return;
     setIsProcessing(true);
     try {
       let systemPrompt = "";
@@ -89,17 +121,19 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         if (step === 3) {
-          setFormData({ ...formData, firstStock: parsed });
-          speak(language === 'hi-IN' ? "रिकॉर्ड हो गया" : "Recorded");
+          setFormData(prev => ({ ...prev, firstStock: parsed }));
+          speak(language === 'hi-IN' ? "स्टॉक जोड़ दिया गया है" : "Stock added");
         } else if (step === 4) {
-          setFormData({ ...formData, firstSale: parsed });
-          speak(language === 'hi-IN' ? "बिक्री रिकॉर्ड हो गई" : "Sale recorded");
+          setFormData(prev => ({ ...prev, firstSale: parsed }));
+          speak(language === 'hi-IN' ? "बिक्री दर्ज हो गई" : "Sale recorded");
         }
+        setManualInput("");
       }
     } catch (e) {
       console.error(e);
     } finally {
       setIsProcessing(false);
+      setTranscript("");
     }
   };
 
@@ -111,16 +145,29 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
     };
     localStorage.setItem("bolvyapar_profile", JSON.stringify(finalProfile));
     
-    // Save initial stock
     if (formData.firstStock) {
-      const stock = [{ ...formData.firstStock, id: Date.now(), level: 100, maxQty: formData.firstStock.qty, lowStockLevel: 10 }];
-      localStorage.setItem("bolvyapar_stock_data", JSON.stringify(stock));
+      const stockItem = {
+        ...formData.firstStock,
+        id: Date.now(),
+        level: 100,
+        maxQty: formData.firstStock.qty,
+        lowStockLevel: Math.max(1, Math.floor(formData.firstStock.qty * 0.1)),
+        price: formData.firstStock.price || 0
+      };
+      localStorage.setItem("bolvyapar_stock_data", JSON.stringify([stockItem]));
     }
 
-    // Save initial sale
     if (formData.firstSale) {
-      const sale = [{ ...formData.firstSale, id: Date.now(), timestamp: new Date().toISOString(), customer: "Customer" }];
-      localStorage.setItem("bolvyapar_sales_history", JSON.stringify(sale));
+      const saleItem = {
+        ...formData.firstSale,
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        customer: language === 'hi-IN' ? "ग्राहक" : "Customer",
+        item: formData.firstSale.productName,
+        amount: formData.firstSale.price,
+        qty: `${formData.firstSale.quantity || 1} units`
+      };
+      localStorage.setItem("bolvyapar_sales_history", JSON.stringify([saleItem]));
     }
 
     onComplete();
@@ -129,87 +176,39 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
   const getStep3Strings = () => {
     const biz = formData.businessType;
     const isHi = language === 'hi-IN';
-
     const config: Record<string, any> = {
-      tailor: {
-        title: isHi ? "कपड़ा और सामान" : "Add Fabric/Materials",
-        sub: isHi ? "पहला थान या रील बोलकर जोड़ें" : "Add first material by voice",
-        instr: isHi ? "जैसे: '50 मीटर सूती कपड़ा है'" : "e.g. 'I have 50 meters cotton fabric'"
-      },
-      repair: {
-        title: isHi ? "पार्ट्स इन्वेंट्री" : "Add Parts Inventory",
-        sub: isHi ? "पहला पुर्जा बोलकर जोड़ें" : "Add first part by voice",
-        instr: isHi ? "जैसे: '20 मोबाइल स्क्रीन हैं'" : "e.g. 'I have 20 mobile screens'"
-      },
-      dhaba: {
-        title: isHi ? "सामग्री जोड़ें" : "Add Ingredients",
-        sub: isHi ? "पहली सामग्री बोलकर जोड़ें" : "Add first ingredient by voice",
-        instr: isHi ? "जैसे: '10 किलो आटा है'" : "e.g. 'I have 10kg atta'"
-      },
-      milk: {
-        title: isHi ? "उत्पाद जोड़ें" : "Add Products",
-        sub: isHi ? "दूध की मात्रा बोलकर जोड़ें" : "Add milk quantity by voice",
-        instr: isHi ? "जैसे: '50 लीटर दूध रोज़ आता है'" : "e.g. 'I deliver 50 litres daily'"
-      },
-      medical: {
-        title: isHi ? "दवाइयां जोड़ें" : "Add Medicines",
-        sub: isHi ? "पहली दवा बोलकर जोड़ें" : "Add first medicine by voice",
-        instr: isHi ? "जैसे: '100 पैरासिटामोल टैबलेट हैं'" : "e.g. 'I have 100 Paracetamol tablets'"
-      },
-      salon: {
-        title: isHi ? "ब्यूटी प्रोडक्ट्स" : "Add Products",
-        sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add first product by voice",
-        instr: isHi ? "जैसे: '5 बोतल शैम्पू है'" : "e.g. 'I have 5 bottles shampoo'"
-      },
-      kirana: {
-        title: isHi ? "स्टॉक जोड़ें" : "Add Stock",
-        sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add your first item by voice",
-        instr: isHi ? "जैसे: '10 किलो चावल है'" : "e.g. 'I have 10kg Rice'"
-      },
-      other: {
-        title: isHi ? "स्टॉक जोड़ें" : "Add Stock",
-        sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add your first item by voice",
-        instr: isHi ? "जैसे: '100 पीस माल है'" : "e.g. 'I have 100 units stock'"
-      }
+      tailor: { title: isHi ? "कपड़ा और सामान" : "Add Fabric/Materials", sub: isHi ? "पहला थान या रील बोलकर जोड़ें" : "Add first material by voice", instr: isHi ? "जैसे: '50 मीटर सूती कपड़ा है'" : "e.g. 'I have 50 meters cotton fabric'" },
+      repair: { title: isHi ? "पार्ट्स इन्वेंट्री" : "Add Parts Inventory", sub: isHi ? "पहला पुर्जा बोलकर जोड़ें" : "Add first part by voice", instr: isHi ? "जैसे: '20 मोबाइल स्क्रीन हैं'" : "e.g. 'I have 20 mobile screens'" },
+      dhaba: { title: isHi ? "सामग्री जोड़ें" : "Add Ingredients", sub: isHi ? "पहली सामग्री बोलकर जोड़ें" : "Add first ingredient by voice", instr: isHi ? "जैसे: '10 किलो आटा है'" : "e.g. 'I have 10kg atta'" },
+      milk: { title: isHi ? "उत्पाद जोड़ें" : "Add Products", sub: isHi ? "दूध की मात्रा बोलकर जोड़ें" : "Add milk quantity by voice", instr: isHi ? "जैसे: '50 लीटर दूध रोज़ आता है'" : "e.g. 'I deliver 50 litres daily'" },
+      medical: { title: isHi ? "दवाइयां जोड़ें" : "Add Medicines", sub: isHi ? "पहली दवा बोलकर जोड़ें" : "Add first medicine by voice", instr: isHi ? "जैसे: '100 पैरासिटामोल टैबलेट हैं'" : "e.g. 'I have 100 Paracetamol tablets'" },
+      salon: { title: isHi ? "ब्यूटी प्रोडक्ट्स" : "Add Products", sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add first product by voice", instr: isHi ? "जैसे: '5 बोतल शैम्पू है'" : "e.g. 'I have 5 bottles shampoo'" },
+      kirana: { title: isHi ? "स्टॉक जोड़ें" : "Add Stock", sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add your first item by voice", instr: isHi ? "जैसे: '10 किलो चावल है'" : "e.g. 'I have 10kg Rice'" },
+      other: { title: isHi ? "स्टॉक जोड़ें" : "Add Stock", sub: isHi ? "पहला सामान बोलकर जोड़ें" : "Add your first item by voice", instr: isHi ? "जैसे: '100 पीस माल है'" : "e.g. 'I have 100 units stock'" }
     };
-
     return config[biz] || config['kirana'];
   };
 
   const texts = {
     "hi-IN": {
-      step1Title: "दुकान की जानकारी",
-      step1Sub: "अपने व्यापार की शुरुआत करें",
-      shopName: "दुकान का नाम",
-      ownerPhone: "आपका WhatsApp नंबर",
-      step2Title: "व्यापार का प्रकार",
-      step2Sub: "एक विकल्प चुनें",
-      step4Title: "पहली बिक्री",
-      step4Sub: "बोलकर पहली बिक्री दर्ज करें",
+      step1Title: "दुकान की जानकारी", step1Sub: "अपने व्यापार की शुरुआत करें",
+      shopName: "दुकान का नाम", ownerPhone: "आपका WhatsApp नंबर",
+      step2Title: "व्यापार का प्रकार", step2Sub: "एक विकल्प चुनें",
+      step4Title: "पहली बिक्री", step4Sub: "बोलकर पहली बिक्री दर्ज करें",
       step4Instr: "जैसे: '2 किलो चावल बेचा 100 रुपये में'",
-      next: "अगला",
-      finish: "शुरू करें",
-      congrats: "बधाई हो!",
-      congratsSub: "आपका सेटअप पूरा हो गया है"
+      next: "अगला", finish: "शुरू करें", congrats: "बधाई हो!", congratsSub: "आपका सेटअप पूरा हो गया है",
+      typeHere: "यहाँ लिखें (वैकल्पिक)", save: "सहेजें"
     },
     "en-IN": {
-      step1Title: "Shop Details",
-      step1Sub: "Let's start your digital journey",
-      shopName: "Shop Name",
-      ownerPhone: "Your WhatsApp Number",
-      step2Title: "Business Type",
-      step2Sub: "Select your category",
-      step4Title: "First Sale",
-      step4Sub: "Record your first sale by voice",
+      step1Title: "Shop Details", step1Sub: "Let's start your digital journey",
+      shopName: "Shop Name", ownerPhone: "Your WhatsApp Number",
+      step2Title: "Business Type", step2Sub: "Select your category",
+      step4Title: "First Sale", step4Sub: "Record your first sale by voice",
       step4Instr: "e.g. 'Sold 2kg Rice for 100 rupees'",
-      next: "Next",
-      finish: "Get Started",
-      congrats: "Congratulations!",
-      congratsSub: "Your setup is complete"
+      next: "Next", finish: "Get Started", congrats: "Congratulations!", congratsSub: "Your setup is complete",
+      typeHere: "Type here (Optional)", save: "Save"
     }
   }[language];
-
-  const step3Content = getStep3Strings();
 
   return (
     <div className="fixed inset-0 bg-[#0D2240] z-[100] flex flex-col p-6 overflow-y-auto">
@@ -225,29 +224,13 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
               <CardContent className="p-8 space-y-6">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">{texts.shopName}</Label>
-                  <Input 
-                    value={formData.shopName} 
-                    onChange={e => setFormData({...formData, shopName: e.target.value})}
-                    placeholder="e.g. Rahul General Store"
-                    className="h-16 rounded-2xl bg-white/5 border-white/10 text-white text-lg"
-                  />
+                  <Input value={formData.shopName} onChange={e => setFormData({...formData, shopName: e.target.value})} placeholder="e.g. Rahul General Store" className="h-16 rounded-2xl bg-white/5 border-white/10 text-white text-lg" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">{texts.ownerPhone}</Label>
-                  <Input 
-                    value={formData.ownerPhone} 
-                    onChange={e => setFormData({...formData, ownerPhone: e.target.value})}
-                    placeholder="91..."
-                    className="h-16 rounded-2xl bg-white/5 border-white/10 text-white text-lg"
-                  />
+                  <Input value={formData.ownerPhone} onChange={e => setFormData({...formData, ownerPhone: e.target.value})} placeholder="91..." className="h-16 rounded-2xl bg-white/5 border-white/10 text-white text-lg" />
                 </div>
-                <Button 
-                  disabled={!formData.shopName || !formData.ownerPhone}
-                  onClick={() => setStep(2)}
-                  className="w-full h-16 rounded-2xl bg-[#C45000] text-white font-black text-lg"
-                >
-                  {texts.next}
-                </Button>
+                <Button disabled={!formData.shopName || !formData.ownerPhone} onClick={() => setStep(2)} className="w-full h-16 rounded-2xl bg-[#C45000] text-white font-black text-lg">{texts.next}</Button>
               </CardContent>
             </Card>
           </div>
@@ -261,95 +244,58 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
             </div>
             <div className="grid grid-cols-2 gap-4">
               {BUSINESS_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => {
-                    setFormData({...formData, businessType: type.id});
-                    setStep(3);
-                  }}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-6 rounded-[32px] border transition-all active:scale-95",
-                    formData.businessType === type.id ? "bg-[#38BDF8] border-[#38BDF8]" : "bg-white/5 border-white/10"
-                  )}
-                >
+                <button key={type.id} onClick={() => { setFormData({...formData, businessType: type.id}); setStep(3); }} className={cn("flex flex-col items-center justify-center p-6 rounded-[32px] border transition-all active:scale-95", formData.businessType === type.id ? "bg-[#38BDF8] border-[#38BDF8]" : "bg-white/5 border-white/10")}>
                   <span className="text-4xl mb-3">{type.emoji}</span>
-                  <span className="text-[11px] font-black text-white uppercase text-center leading-tight">
-                    {language === 'hi-IN' ? type.hi : type.en}
-                  </span>
+                  <span className="text-[11px] font-black text-white uppercase text-center leading-tight">{language === 'hi-IN' ? type.hi : type.en}</span>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {step === 3 && (
+        {(step === 3 || step === 4) && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
             <div className="text-center space-y-2">
-              <h1 className="text-4xl font-black text-white tracking-tight">{step3Content.title}</h1>
-              <p className="text-white/60 font-medium">{step3Content.sub}</p>
+              <h1 className="text-4xl font-black text-white tracking-tight">{step === 3 ? getStep3Strings().title : texts.step4Title}</h1>
+              <p className="text-white/60 font-medium">{step === 3 ? getStep3Strings().sub : texts.step4Sub}</p>
             </div>
+            
             <div className="flex flex-col items-center space-y-8">
-              <button 
-                onClick={startListening}
-                disabled={isProcessing}
-                className={cn(
-                  "h-32 w-32 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90",
-                  isListening ? "bg-red-500 animate-pulse" : "bg-[#C45000]",
-                  formData.firstStock && "bg-emerald-500"
+              <div className="relative">
+                <button onClick={startListening} disabled={isProcessing} className={cn("h-32 w-32 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90", isListening ? "bg-red-500 animate-pulse" : "bg-[#C45000]", (step === 3 ? formData.firstStock : formData.firstSale) && "bg-emerald-500")}>
+                  {isProcessing ? <Loader2 className="text-white animate-spin" size={48} /> : 
+                   (step === 3 ? formData.firstStock : formData.firstSale) ? <CheckCircle2 className="text-white" size={48} /> : <Mic className="text-white" size={48} />}
+                </button>
+                {isListening && (
+                  <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-64 text-center">
+                    <p className="text-[#38BDF8] font-black text-sm animate-pulse">"{transcript || "..."}"</p>
+                  </div>
                 )}
-              >
-                {isProcessing ? <Loader2 className="text-white animate-spin" size={48} /> : 
-                 formData.firstStock ? <CheckCircle2 className="text-white" size={48} /> : <Mic className="text-white" size={48} />}
-              </button>
-              <p className="text-white/40 text-sm italic text-center px-4">{step3Content.instr}</p>
-              {formData.firstStock && (
-                <div className="bg-white/5 p-4 rounded-2xl border border-emerald-500/30 text-emerald-400 text-sm font-bold flex gap-2">
-                  <CheckCircle2 size={16} /> {formData.firstStock.name} - {formData.firstStock.qty} {formData.firstStock.unit}
-                </div>
-              )}
-              <Button 
-                disabled={!formData.firstStock}
-                onClick={() => setStep(4)}
-                className="w-full h-16 rounded-2xl bg-white/10 text-white font-black"
-              >
-                {texts.next}
-              </Button>
-            </div>
-          </div>
-        )}
+              </div>
 
-        {step === 4 && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
-            <div className="text-center space-y-2">
-              <h1 className="text-4xl font-black text-white tracking-tight">{texts.step4Title}</h1>
-              <p className="text-white/60 font-medium">{texts.step4Sub}</p>
-            </div>
-            <div className="flex flex-col items-center space-y-8">
-              <button 
-                onClick={startListening}
-                disabled={isProcessing}
-                className={cn(
-                  "h-32 w-32 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90",
-                  isListening ? "bg-red-500 animate-pulse" : "bg-[#C45000]",
-                  formData.firstSale && "bg-emerald-500"
-                )}
-              >
-                {isProcessing ? <Loader2 className="text-white animate-spin" size={48} /> : 
-                 formData.firstSale ? <CheckCircle2 className="text-white" size={48} /> : <Mic className="text-white" size={48} />}
-              </button>
-              <p className="text-white/40 text-sm italic text-center px-4">{texts.step4Instr}</p>
-              {formData.firstSale && (
-                <div className="bg-white/5 p-4 rounded-2xl border border-emerald-500/30 text-emerald-400 text-sm font-bold flex gap-2">
-                  <CheckCircle2 size={16} /> {formData.firstSale.productName} - ₹{formData.firstSale.price}
+              <p className="text-white/40 text-sm italic text-center px-4">{step === 3 ? getStep3Strings().instr : texts.step4Instr}</p>
+
+              {(micError || true) && !isListening && (
+                <div className="w-full space-y-4">
+                  <div className="relative">
+                    <Input value={manualInput} onChange={e => setManualInput(e.target.value)} placeholder={texts.typeHere} className="h-16 rounded-2xl bg-white/5 border-white/10 text-white" />
+                    <Button onClick={() => handleVoiceAction(manualInput)} disabled={!manualInput.trim() || isProcessing} className="absolute right-2 top-2 h-12 bg-[#38BDF8] text-[#0D2240] font-black px-4 rounded-xl">{texts.save}</Button>
+                  </div>
+                  {micError && (
+                    <div className="flex items-center gap-2 text-amber-400 text-[10px] font-bold uppercase justify-center">
+                      <AlertCircle size={14} /> Mic permission needed or not supported
+                    </div>
+                  )}
                 </div>
               )}
-              <Button 
-                disabled={!formData.firstSale}
-                onClick={() => setStep(5)}
-                className="w-full h-16 rounded-2xl bg-white/10 text-white font-black"
-              >
-                {texts.next}
-              </Button>
+
+              {(step === 3 ? formData.firstStock : formData.firstSale) && (
+                <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/30 text-emerald-400 text-sm font-bold flex gap-2 animate-in zoom-in-95">
+                  <CheckCircle2 size={16} /> {step === 3 ? `${formData.firstStock.name} (${formData.firstStock.qty} ${formData.firstStock.unit})` : `${formData.firstSale.productName} (₹${formData.firstSale.price})`}
+                </div>
+              )}
+
+              <Button disabled={!(step === 3 ? formData.firstStock : formData.firstSale)} onClick={() => setStep(step + 1)} className="w-full h-16 rounded-2xl bg-white/10 text-white font-black">{texts.next}</Button>
             </div>
           </div>
         )}
@@ -363,12 +309,7 @@ export default function FirstLaunchFlow({ onComplete, language }: FirstLaunchFlo
               <h1 className="text-4xl font-black text-white tracking-tight">{texts.congrats}</h1>
               <p className="text-white/60 font-medium">{texts.congratsSub}</p>
             </div>
-            <Button 
-              onClick={finishSetup}
-              className="w-full h-20 rounded-[32px] bg-[#C45000] text-white font-black text-xl shadow-2xl"
-            >
-              {texts.finish}
-            </Button>
+            <Button onClick={finishSetup} className="w-full h-20 rounded-[32px] bg-[#C45000] text-white font-black text-xl shadow-2xl">{texts.finish}</Button>
           </div>
         )}
 
