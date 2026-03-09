@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -85,10 +86,10 @@ Intents:
 4. payment (Udhaar vapas lena)
 5. job_create (Service job)
 6. job_complete (Mark job ready)
-7. reminder (Set a reminder for owner/customer - e.g. 'Ramesh ko kal yaad dilao' or 'Kal chawal mangana hai')
+7. reminder (Set reminder for owner/customer. e.g. 'Ramesh ko kal yaad dilao' or 'Subah doodh mangana hai')
 
 Context: ${businessType}. Stock: ${stockCategories}. Khata: ${khataNames}. 
-For reminder: extract customerName, message, date (ISO string for the reminder date).
+For reminder: extract customerName (if any), message, date (ISO string for the reminder date).
 
 Return ONLY JSON: {"intent": "...", "spokenResponse": "...", "productName": "...", "customerName": "...", "price": 0, "quantity": 0, "unit": "...", "description": "...", "advance": 0, "message": "...", "date": "..."}`;
 
@@ -104,7 +105,7 @@ Return ONLY JSON: {"intent": "...", "spokenResponse": "...", "productName": "...
   };
 
   const handleTransactionResult = (txn: any) => {
-    if (isHelper && txn.intent !== 'sale') {
+    if (isHelper && !['sale'].includes(txn.intent)) {
       speak(language === "hi-IN" ? "सिर्फ सेल लिखें।" : "Sales only.");
       return;
     }

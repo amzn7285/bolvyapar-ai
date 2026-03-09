@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, MessageCircle, X, Sparkles, ShieldAlert, Settings, ClipboardList } from "lucide-react";
+import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, MessageCircle, X, Sparkles, ShieldAlert, Settings, ClipboardList, Bell } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
 import ReportTab from "./tabs/ReportTab";
@@ -84,7 +85,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
 
   // Morning Briefing Logic
   useEffect(() => {
-    if (isHelper || reminders.length === 0) return;
+    if (isHelper || !reminders || reminders.length === 0) return;
 
     const today = new Date();
     const lastBriefing = localStorage.getItem(BRIEFING_KEY);
@@ -266,8 +267,8 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     if (isGeneratingSummary || isHelper) return;
     setIsGeneratingSummary(true);
 
-    const today = new Date().toDateString();
-    const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today);
+    const todayStr = new Date().toDateString();
+    const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === todayStr);
     const count = todaySales.length;
     const itemMap: Record<string, number> = {};
     todaySales.forEach(s => { itemMap[s.item] = (itemMap[s.item] || 0) + (parseFloat(s.qty) || 1); });
