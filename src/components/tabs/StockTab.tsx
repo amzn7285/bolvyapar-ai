@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Volume2, Plus, X } from "lucide-react";
+import { Volume2, Plus, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface StockTabProps {
   language: "hi-IN" | "en-IN";
@@ -47,7 +48,7 @@ export default function StockTab({ language, stock, onAddCategory }: StockTabPro
       costPrice: Number(formData.costPrice),
       sellingPrice: Number(formData.sellingPrice),
       lowStockLevel: Number(formData.lowStockLevel),
-      hiName: formData.hiName || formData.name // Fallback if no Hindi name provided
+      hiName: formData.hiName || formData.name
     });
     setIsDialogOpen(false);
     setFormData({
@@ -213,41 +214,73 @@ export default function StockTab({ language, stock, onAddCategory }: StockTabPro
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {stock.map((item) => (
-          <Card key={item.id} className="bg-white border-slate-100 rounded-[24px] overflow-hidden shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-4 items-center">
-                  <span className="text-4xl">{item.emoji}</span>
-                  <div>
-                    <h3 className="text-slate-400 text-[10px] uppercase font-bold tracking-widest">
-                      {language === 'hi-IN' ? item.hiName : item.name}
-                    </h3>
-                    <p className="text-[22px] font-black text-slate-900">
-                      {item.qty}
-                      <span className="text-xs ml-1 font-bold text-slate-400 uppercase">{item.unit}</span>
-                    </p>
+        {stock.map((item) => {
+          const warning = item.lowStockLevel || 10;
+          const isRed = item.qty < (warning * 0.15);
+          const isYellow = !isRed && item.qty < (warning * 0.30);
+          const isGreen = !isRed && !isYellow && item.qty > (warning * 0.50);
+
+          return (
+            <Card 
+              key={item.id} 
+              className={cn(
+                "bg-white rounded-[24px] overflow-hidden shadow-sm transition-all border-2",
+                isRed ? "border-red-500" : isYellow ? "border-amber-400" : isGreen ? "border-emerald-500" : "border-slate-100"
+              )}
+            >
+              <CardContent className="p-5">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex gap-4 items-center">
+                    <span className="text-4xl relative">
+                      {item.emoji}
+                      {isRed && (
+                        <div className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-0.5 animate-flash ring-1 ring-white">
+                          <AlertTriangle size={12} fill="currentColor" />
+                        </div>
+                      )}
+                    </span>
+                    <div>
+                      <h3 className="text-slate-400 text-[10px] uppercase font-bold tracking-widest">
+                        {language === 'hi-IN' ? item.hiName : item.name}
+                      </h3>
+                      <p className={cn(
+                        "text-[22px] font-black",
+                        isRed ? "text-red-600" : isYellow ? "text-amber-500" : isGreen ? "text-emerald-600" : "text-slate-900"
+                      )}>
+                        {item.qty}
+                        <span className="text-xs ml-1 font-bold text-slate-400 uppercase">{item.unit}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => speakStock(item)}
+                    className={cn(
+                      "h-12 w-12 flex items-center justify-center rounded-2xl",
+                      isRed ? "bg-red-50 text-red-600" : "bg-slate-50 text-[#1A6B3C]"
+                    )}
+                  >
+                    <Volume2 size={20} />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <Progress 
+                    value={item.level} 
+                    className={cn(
+                      "h-2 rounded-full",
+                      isRed ? "[&>div]:bg-red-500" : isYellow ? "[&>div]:bg-amber-400" : isGreen ? "[&>div]:bg-emerald-500" : ""
+                    )} 
+                  />
+                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                    <span className={isRed ? "text-red-600 font-black" : isYellow ? "text-amber-500" : ""}>
+                      {texts.critical}
+                    </span>
+                    <span className={isGreen ? "text-emerald-600 font-black" : ""}>{texts.healthy}</span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => speakStock(item)}
-                  className="h-12 w-12 flex items-center justify-center bg-[#1A6B3C]/10 rounded-2xl text-[#1A6B3C]"
-                >
-                  <Volume2 size={20} />
-                </button>
-              </div>
-              <div className="space-y-2">
-                <Progress value={item.level} className="h-2 rounded-full" />
-                <div className="flex justify-between text-[9px] font-black text-slate-300 uppercase tracking-widest">
-                  <span className={item.qty <= (item.lowStockLevel || 10) ? "text-destructive" : ""}>
-                    {texts.critical}
-                  </span>
-                  <span>{texts.healthy}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

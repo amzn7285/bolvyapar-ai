@@ -23,9 +23,9 @@ const SNOOZE_KEY = "bolvyapar_lesson_snooze";
 const SNOOZE_DURATION = 3600000;
 
 const DEFAULT_STOCK = [
-  { id: 'grains', emoji: '🌾', name: 'Grains', hiName: 'अनाज', qty: 100, unit: 'kg', level: 100, maxQty: 100 },
-  { id: 'dairy', emoji: '🥛', name: 'Dairy', hiName: 'डेयरी', qty: 50, unit: 'L', level: 100, maxQty: 50 },
-  { id: 'essentials', emoji: '🧼', name: 'Essentials', hiName: 'ज़रूरी सामान', qty: 200, unit: 'units', level: 100, maxQty: 200 },
+  { id: 'grains', emoji: '🌾', name: 'Grains', hiName: 'अनाज', qty: 100, unit: 'kg', level: 100, maxQty: 100, lowStockLevel: 20 },
+  { id: 'dairy', emoji: '🥛', name: 'Dairy', hiName: 'डेयरी', qty: 50, unit: 'L', level: 100, maxQty: 50, lowStockLevel: 10 },
+  { id: 'essentials', emoji: '🧼', name: 'Essentials', hiName: 'ज़रूरी सामान', qty: 200, unit: 'units', level: 100, maxQty: 200, lowStockLevel: 30 },
 ];
 
 export default function Dashboard({ role, language, onLogout }: DashboardProps) {
@@ -81,7 +81,6 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       const itemName = item.name.toLowerCase();
       const itemHiName = item.hiName.toLowerCase();
 
-      // Flexible matching for voice commands
       if (prodName.includes(itemName) || prodName.includes(itemHiName)) {
         isMatch = true;
       } else if (item.id === 'dairy' && (prodName.includes('milk') || prodName.includes('doodh'))) {
@@ -128,6 +127,12 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
     utterance.lang = language;
     window.speechSynthesis.speak(utterance);
   };
+
+  // Calculate count of red stock items
+  const redItemsCount = stock.filter(item => {
+    const warning = item.lowStockLevel || 10;
+    return item.qty < (warning * 0.15);
+  }).length;
 
   if (showCustomerView) {
     return <CustomerView transaction={lastTransaction} onBack={() => setShowCustomerView(false)} language={language} />;
@@ -226,7 +231,13 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 pb-safe z-[60] shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
         <div className="flex justify-between items-center max-w-md mx-auto relative h-16">
           <NavBtn icon={<Home size={22} />} label={texts.dukaan} active={activeTab === 'dukaan'} onClick={() => setActiveTab('dukaan')} />
-          <NavBtn icon={<Package size={22} />} label={texts.stock} active={activeTab === 'stock'} onClick={() => setActiveTab('stock')} />
+          <NavBtn 
+            icon={<Package size={22} />} 
+            label={texts.stock} 
+            active={activeTab === 'stock'} 
+            onClick={() => setActiveTab('stock')} 
+            badge={redItemsCount > 0 ? redItemsCount : undefined}
+          />
           
           <div className="relative -top-8 flex flex-col items-center">
             <VoiceButton 
@@ -246,18 +257,25 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   );
 }
 
-function NavBtn({ icon, label, active, onClick, disabled }: { icon: any, label: string, active: boolean, onClick: () => void, disabled?: boolean }) {
+function NavBtn({ icon, label, active, onClick, disabled, badge }: { icon: any, label: string, active: boolean, onClick: () => void, disabled?: boolean, badge?: number }) {
   return (
     <button 
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex flex-col items-center gap-1 min-w-[64px] transition-all",
+        "flex flex-col items-center gap-1 min-w-[64px] transition-all relative",
         active ? "text-[#C45000]" : "text-slate-400",
         disabled && "opacity-20"
       )}
     >
-      <div className={cn("transition-transform", active && "scale-110")}>{icon}</div>
+      <div className={cn("transition-transform", active && "scale-110")}>
+        {icon}
+        {badge !== undefined && (
+          <div className="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] font-black h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-white animate-pulse">
+            {badge}
+          </div>
+        )}
+      </div>
       <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
       {active && <div className="w-1 h-1 rounded-full bg-[#C45000] mt-0.5" />}
     </button>
