@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, Lock, Eye, EyeOff, MessageCircle, X, ShieldAlert, Settings, History } from "lucide-react";
+import { Home, Package, BarChart3, Lock, Eye, EyeOff, MessageCircle, X, ShieldAlert, Settings, Bell } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
 import ReportTab from "./tabs/ReportTab";
 import SettingsTab from "./tabs/SettingsTab";
 import CreditKhataTab from "./tabs/CreditKhataTab";
 import OrdersTab from "./tabs/OrdersTab";
+import RemindersTab from "./tabs/RemindersTab";
 import VoiceButton from "./VoiceButton";
 import ConnectivityBanner from "./ConnectivityBanner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -67,6 +68,7 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
   const [summaryModal, setSummaryModal] = useState<{ show: boolean, text: string, whatsappUrl: string } | null>(null);
 
   const isHelper = role === "helper";
+  const isHi = language === 'hi-IN';
 
   useEffect(() => {
     const savedSales = localStorage.getItem(SALES_STORAGE_KEY);
@@ -96,10 +98,10 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
     const today = new Date();
     const lastBriefing = localStorage.getItem(BRIEFING_KEY);
     if (!lastBriefing || !isSameDay(parseISO(lastBriefing), today)) {
-      const todaysReminders = reminders.filter(r => { try { return isSameDay(parseISO(r.date), today); } catch { return false; } });
+      const todaysReminders = reminders.filter(r => { try { return isSameDay(new Date(r.date), today); } catch { return false; } });
       if (todaysReminders.length > 0) {
-        const intro = language === 'hi-IN' ? "आज के लिए कुछ जरूरी काम हैं:" : "You have tasks for today:";
-        const items = todaysReminders.map(r => r.customerName ? (language === 'hi-IN' ? `${r.customerName} को याद दिलाना है: ${r.message}` : `Remind ${r.customerName}: ${r.message}`) : r.message).join(". ");
+        const intro = isHi ? "आज के लिए कुछ जरूरी काम हैं:" : "You have tasks for today:";
+        const items = todaysReminders.map(r => r.customerName ? (isHi ? `${r.customerName} को याद दिलाना है: ${r.message}` : `Remind ${r.customerName}: ${r.message}`) : r.message).join(". ");
         const utterance = new SpeechSynthesisUtterance(`${intro} ${items}`);
         utterance.lang = language;
         window.speechSynthesis.speak(utterance);
@@ -120,12 +122,8 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
     const timestamp = new Date().toISOString();
 
     if (details.intent === 'reminder') {
-      setReminders(prev => {
-        const newReminder = { id: Date.now(), timestamp, customerName: details.customerName || null, message: details.message || details.productName, date: details.date || timestamp, completed: false };
-        const updated = [newReminder, ...prev];
-        localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
+      const newReminder = { id: Date.now(), timestamp, customerName: details.customerName || null, message: details.message || details.productName, date: details.date || timestamp, completed: false };
+      setReminders(prev => { const updated = [newReminder, ...prev]; localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(updated)); return updated; });
       return;
     }
 
@@ -135,8 +133,8 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
         localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(updated));
         return updated;
       });
-      const shopName = profile?.shopName || "BolVyaapar AI Shop";
-      const msg = language === 'hi-IN' ? `नमस्ते ${details.customerName}, आपका काम तैयार है — आ जाइये। धन्यवाद! - ${shopName}` : `Hi ${details.customerName}, your work is ready - please visit us. Thanks! - ${shopName}`;
+      const shopName = profile?.shopName || "BolVyaapar AI";
+      const msg = isHi ? `नमस्ते ${details.customerName}, आपका काम तैयार है — आ जाइये। धन्यवाद! - ${shopName}` : `Hi ${details.customerName}, your work is ready. Thanks! - ${shopName}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
       return;
     }
@@ -146,13 +144,7 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
       const advance = details.advance || 0;
       const balance = Math.max(0, total - advance);
       const newJob = { id: Date.now(), timestamp, customerName: details.customerName, item: details.productName, problem: details.description || details.productName, price: total, advance, status: 'Received', dueDate: details.date || null };
-      
-      setJobs(prev => {
-        const updated = [newJob, ...prev];
-        localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
-
+      setJobs(prev => { const updated = [newJob, ...prev]; localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(updated)); return updated; });
       if (balance > 0 || advance > 0) {
         setCreditKhata(prev => {
           let exists = false;
@@ -164,10 +156,7 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
             }
             return c;
           });
-          if (!exists) {
-            const entry = { id: Date.now(), timestamp, type: 'advance_job', amount: balance, note: `Job: ${details.productName}` };
-            updated.unshift({ id: Date.now(), name: details.customerName, phone: "", balance, history: [entry], isService: true });
-          }
+          if (!exists) { const entry = { id: Date.now(), timestamp, type: 'advance_job', amount: balance, note: `Job: ${details.productName}` }; updated.unshift({ id: Date.now(), name: details.customerName, phone: "", balance, history: [entry], isService: true }); }
           localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(updated));
           return updated;
         });
@@ -176,12 +165,8 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
     }
 
     if (details.isExpense || details.intent === 'expense') {
-      setExpenses(prev => {
-        const newExpense = { id: Date.now(), timestamp, category: details.productName || (language === 'hi-IN' ? 'खर्चा' : 'Expense'), amount: details.price || 0 };
-        const updated = [newExpense, ...prev];
-        localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
+      const newExpense = { id: Date.now(), timestamp, category: details.productName || (isHi ? 'खर्चा' : 'Expense'), amount: details.price || 0 };
+      setExpenses(prev => { const updated = [newExpense, ...prev]; localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(updated)); return updated; });
       return;
     }
 
@@ -196,10 +181,7 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
           }
           return c;
         });
-        if (!exists) {
-          const entry = { id: Date.now(), timestamp, type: 'credit', amount: details.price || 0, note: details.productName || 'Credit' };
-          updated.unshift({ id: Date.now(), name: details.customerName, phone: "", balance: details.price || 0, history: [entry] });
-        }
+        if (!exists) { const entry = { id: Date.now(), timestamp, type: 'credit', amount: details.price || 0, note: details.productName || 'Credit' }; updated.unshift({ id: Date.now(), name: details.customerName, phone: "", balance: details.price || 0, history: [entry] }); }
         localStorage.setItem(CREDIT_KHATA_KEY, JSON.stringify(updated));
         return updated;
       });
@@ -210,7 +192,7 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
       setCreditKhata(prev => {
         const updated = prev.map(c => {
           if (c.name.toLowerCase() === details.customerName?.toLowerCase()) {
-            const entry = { id: Date.now(), timestamp, type: 'payment', amount: details.price || 0, note: language === 'hi-IN' ? 'जमा' : 'Received' };
+            const entry = { id: Date.now(), timestamp, type: 'payment', amount: details.price || 0, note: isHi ? 'जमा' : 'Received' };
             return { ...c, balance: Math.max(0, (c.balance || 0) - (details.price || 0)), history: [entry, ...(c.history || [])], lastPaymentAt: timestamp };
           }
           return c;
@@ -221,16 +203,10 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
       return;
     }
 
-    // Default: SALE — save and reduce stock
-    const newSale = { id: Date.now(), timestamp, item: details.productName || "Unknown Item", qty: details.quantity ? `${details.quantity} ${details.unit || ''}` : "---", customer: details.customerName || (language === 'hi-IN' ? 'ग्राहक' : 'Customer'), amount: details.price || 0 };
-    
-    setSales(prev => {
-      const updated = [newSale, ...prev];
-      localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    // Default: SALE
+    const newSale = { id: Date.now(), timestamp, item: details.productName || "Unknown Item", qty: details.quantity ? `${details.quantity} ${details.unit || ''}` : "---", customer: details.customerName || (isHi ? 'ग्राहक' : 'Customer'), amount: details.price || 0 };
+    setSales(prev => { const updated = [newSale, ...prev]; localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updated)); return updated; });
 
-    // Stock reduction with synonym matching
     const soldQty = Number(details.quantity) || 0;
     const productSpoken = (details.productName || "").toLowerCase().trim();
 
@@ -239,13 +215,9 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
         const itemName = (item.name || "").toLowerCase().trim();
         const itemHiName = (item.hiName || "").toLowerCase().trim();
         let isMatch = false;
-
         if (details.matchedCategory === item.name) isMatch = true;
-
         if (!isMatch && productSpoken) {
-          if (itemName === productSpoken || productSpoken.includes(itemName) || itemName.includes(productSpoken) || itemHiName === productSpoken || productSpoken.includes(itemHiName) || itemHiName.includes(productSpoken)) {
-            isMatch = true;
-          }
+          if (itemName === productSpoken || productSpoken.includes(itemName) || itemName.includes(productSpoken) || itemHiName === productSpoken || productSpoken.includes(itemHiName) || itemHiName.includes(productSpoken)) isMatch = true;
           if (!isMatch) {
             for (const group of Object.values(PRODUCT_SYNONYMS)) {
               const spokenInGroup = group.some(s => productSpoken.includes(s) || s.includes(productSpoken));
@@ -254,7 +226,6 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
             }
           }
         }
-
         if (isMatch && soldQty > 0) {
           const newQty = Math.max(0, (item.qty || 0) - soldQty);
           const level = item.maxQty > 0 ? Math.round((newQty / item.maxQty) * 100) : 0;
@@ -276,18 +247,18 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
     const itemMap: Record<string, number> = {};
     todaySales.forEach(s => { itemMap[s.item] = (itemMap[s.item] || 0) + (parseFloat(s.qty) || 1); });
     const bestSeller = Object.entries(itemMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "---";
-    const systemPrompt = `Closing summary for ${profile?.businessType || 'shop'}. Sales today: ${count}. Best item: ${bestSeller}. Respond in ${language === 'hi-IN' ? 'Hindi' : 'English'} in 2-3 warm sentences. No money totals.`;
+    const systemPrompt = `Closing summary. Sales: ${count}. Best: ${bestSeller}. Language: ${isHi ? 'Hindi' : 'English'}. 2-3 warm sentences. No money totals.`;
     try {
       const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userMessage: "Daily summary", systemPrompt }) });
       const data = await response.json();
-      const text = data.reply || (language === 'hi-IN' ? 'आज का हिसाब तैयार है।' : "Today's summary is ready.");
+      const text = data.reply || (isHi ? 'आज का हिसाब तैयार है।' : "Today's summary is ready.");
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language;
       window.speechSynthesis.speak(utterance);
-      const shareMsg = language === 'hi-IN' ? `📊 *आज का हिसाब: ${profile?.shopName}*\n✅ ${count} बिक्री\n🔥 खास: ${bestSeller}\n_BolVyaapar AI_` : `📊 *Today's Summary: ${profile?.shopName}*\n✅ ${count} Sales\n🔥 Top: ${bestSeller}\n_BolVyaapar AI_`;
+      const shareMsg = isHi ? `📊 *आज का हिसाब: ${profile?.shopName}*\n✅ ${count} बिक्री\n🔥 खास: ${bestSeller}\n_BolVyaapar AI_` : `📊 *Today's Summary: ${profile?.shopName}*\n✅ ${count} Sales\n🔥 Top: ${bestSeller}\n_BolVyaapar AI_`;
       setSummaryModal({ show: true, text, whatsappUrl: `https://wa.me/${profile?.ownerPhone}?text=${encodeURIComponent(shareMsg)}` });
     } catch {
-      setSummaryModal({ show: true, text: language === 'hi-IN' ? 'आज का हिसाब तैयार है।' : "Summary ready.", whatsappUrl: `https://wa.me/${profile?.ownerPhone}?text=Summary` });
+      setSummaryModal({ show: true, text: isHi ? 'आज का हिसाब तैयार है।' : "Summary ready.", whatsappUrl: `https://wa.me/${profile?.ownerPhone}?text=Summary` });
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -295,11 +266,12 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
 
   const totalOutstanding = creditKhata.reduce((acc, curr) => acc + (curr.balance || 0), 0);
   const redItemsCount = stock.filter(item => item.level < 15).length;
+  const todayReminderCount = reminders.filter(r => { try { return isSameDay(new Date(r.date), new Date()); } catch { return false; } }).length;
   const bizInfo = BUSINESS_TYPES.find(b => b.id === profile?.businessType) || BUSINESS_TYPES[0];
 
   const texts = {
-    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", boliye: "बोलिए", khata: "खाता", report: "रिपोर्ट", history: "इतिहास", share: "WhatsApp पर भेजें", tagline: "बोलकर चलाओ AI से कारोबार" },
-    "en-IN": { dukaan: "Dukaan", stock: "Stock", boliye: "Boliye", khata: "Khata", report: "Report", history: "History", share: "Share on WhatsApp", tagline: "Bolkar Chalao AI Se Karobaar" }
+    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", boliye: "बोलिए", remind: "याद", report: "रिपोर्ट", share: "WhatsApp पर भेजें", tagline: "बोलकर चलाओ AI से कारोबार" },
+    "en-IN": { dukaan: "Dukaan", stock: "Stock", boliye: "Boliye", remind: "Remind", report: "Report", share: "Share on WhatsApp", tagline: "Bolkar Chalao AI Se Karobaar" }
   }[language];
 
   return (
@@ -321,7 +293,7 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
           </div>
           <h1 className="text-xl font-black text-white tracking-tight truncate max-w-[180px]">{profile?.shopName || 'BolVyaapar AI'}</h1>
           <p className="text-[10px] text-[#FFB300] font-bold italic tracking-tight mb-0.5">{texts.tagline}</p>
-          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-1">{bizInfo.emoji} {language === 'hi-IN' ? bizInfo.hi : bizInfo.en}</p>
+          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-1">{bizInfo.emoji} {isHi ? bizInfo.hi : bizInfo.en}</p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => setActiveTab("settings")} className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-white/60"><Settings size={22} /></button>
@@ -342,8 +314,8 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
           <TabsContent value="stock" className="m-0 p-4 pb-12">
             <StockTab role={role} language={language} stock={stock} onAddCategory={handleAddStockCategory} sales={sales} profile={profile} />
           </TabsContent>
-          <TabsContent value="history" className="m-0 p-4 pb-12">
-            <OrdersTab language={language} isService={bizInfo.isService} jobs={jobs} sales={sales} onUpdateJobs={(updated) => { setJobs(updated); localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(updated)); }} />
+          <TabsContent value="reminders" className="m-0 p-4 pb-12">
+            <RemindersTab language={language} reminders={reminders} onUpdateReminders={(updated) => { setReminders(updated); localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(updated)); }} profile={profile} />
           </TabsContent>
           {!isHelper && (
             <>
@@ -365,7 +337,7 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
         <DialogContent className="max-w-[90vw] rounded-[40px] p-0 border-none bg-white overflow-hidden shadow-2xl">
           <div className="bg-[#0D2240] p-8 text-white relative">
             <button onClick={() => setSummaryModal(null)} className="absolute right-4 top-4 text-white/40"><X size={24} /></button>
-            <h2 className="text-2xl font-black uppercase tracking-tight mb-4">{language === 'hi-IN' ? 'आज का हिसाब' : "Today's Summary"}</h2>
+            <h2 className="text-2xl font-black uppercase tracking-tight mb-4">{isHi ? 'आज का हिसाब' : "Today's Summary"}</h2>
             <p className="text-white/80 leading-relaxed font-medium text-lg italic">{summaryModal?.text}</p>
           </div>
           <div className="p-8 bg-slate-50">
@@ -380,11 +352,13 @@ export default function Dashboard({ role, language, onLogout, openStockOnLoad = 
         <div className="flex justify-around items-center max-w-md mx-auto relative h-16">
           <NavBtn icon={<Home size={26} />} label={texts.dukaan} active={activeTab === 'dukaan'} onClick={() => setActiveTab('dukaan')} />
           <NavBtn icon={<Package size={26} />} label={texts.stock} active={activeTab === 'stock'} onClick={() => setActiveTab('stock')} badge={redItemsCount > 0 ? redItemsCount : undefined} />
+
           <div className="relative flex flex-col items-center">
             <VoiceButton role={role} language={language} privateMode={privateMode} onTransactionSuccess={handleTransaction} businessType={profile?.businessType} stock={stock} khata={creditKhata} compact />
             <span className="text-[11px] font-black uppercase tracking-tight text-[#38BDF8]">{texts.boliye}</span>
           </div>
-          <NavBtn icon={<History size={26} />} label={texts.history} active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+
+          <NavBtn icon={<Bell size={26} />} label={texts.remind} active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} badge={todayReminderCount > 0 ? todayReminderCount : undefined} />
           {!isHelper && <NavBtn icon={<BarChart3 size={26} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} />}
         </div>
       </nav>
