@@ -3,9 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Volume2, Plus, AlertTriangle, Mic, Loader2, CheckCircle2, X, ShoppingCart, MessageCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Volume2, Plus, AlertTriangle, Mic, Loader2, CheckCircle2, ShoppingCart } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,7 +20,6 @@ interface StockTabProps {
 export default function StockTab({ role, language, stock, onAddCategory, sales, profile }: StockTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [tempResult, setTempResult] = useState<any>(null);
   const { toast } = useToast();
 

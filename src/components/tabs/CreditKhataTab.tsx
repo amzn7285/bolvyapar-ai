@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, MessageCircle, Phone, History, Camera, ArrowUpRight, ArrowDownLeft, X, Loader2, CheckCircle2, ShieldAlert, Sparkles } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Search, MessageCircle, Phone, History, Camera, ArrowUpRight, ArrowDownLeft, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
 
@@ -18,11 +18,10 @@ interface CreditKhataTabProps {
   jobs?: any[];
 }
 
-export default function CreditKhataTab({ language, customers, onUpdateCustomers, profile, sales, jobs = [] }: CreditKhataTabProps) {
+export default function CreditKhataTab({ language, customers, profile, sales, jobs = [] }: CreditKhataTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const filteredCustomers = customers.filter(c => 
@@ -54,13 +53,11 @@ export default function CreditKhataTab({ language, customers, onUpdateCustomers,
     setIsCameraOpen(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      setHasCameraPermission(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
-      setHasCameraPermission(false);
     }
   };
 
@@ -93,8 +90,8 @@ export default function CreditKhataTab({ language, customers, onUpdateCustomers,
   };
 
   const texts = {
-    "hi-IN": { title: "क्रेडिट खाता (उधार)", search: "नाम से खोजें", empty: "कोई ग्राहक नहीं मिला", history: "हिसाब", balance: "बाकी", remind: "रिमाइंडर", camera: "फोटो भेजें", lastItems: "पिछला सामान", lastPay: "पिछली जमा", advance: "एडवांस", settled: "हिसाब साफ़", totalDue: "कुल बकाया" },
-    "en-IN": { title: "Credit Khata", search: "Search by name", empty: "No customers found", history: "History", balance: "Due", remind: "Remind", camera: "Photo Share", lastItems: "Last Bought", lastPay: "Last Paid", advance: "Advance", settled: "Settled", totalDue: "Total Due" }
+    "hi-IN": { title: "खाता (उधार)", search: "नाम से खोजें", empty: "कोई ग्राहक नहीं मिला", history: "इतिहास", balance: "बाकी", remind: "रिमाइंडर", camera: "फोटो भेजें", lastItems: "पिछला सामान", lastPay: "पिछली जमा", advance: "एडवांस", settled: "साफ़", totalDue: "कुल बकाया" },
+    "en-IN": { title: "Khata (Credit)", search: "Search by name", empty: "No customers found", history: "History", balance: "Due", remind: "Remind", camera: "Photo Share", lastItems: "Last Bought", lastPay: "Last Paid", advance: "Advance", settled: "Settled", totalDue: "Total Due" }
   }[language];
 
   return (

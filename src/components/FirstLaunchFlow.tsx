@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Mic, Loader2, CheckCircle2, AlertCircle, ArrowRight, SkipForward } from "lucide-react";
+import { Mic, CheckCircle2, AlertCircle, ArrowRight, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FirstLaunchFlowProps {
@@ -20,7 +20,7 @@ const BUSINESS_TYPES = [
   { id: 'repair', emoji: '🔧', en: "Repair Shop", hi: "रिपेयर शॉप" },
   { id: 'milk', emoji: '🥛', en: "Milk Delivery", hi: "दूध की डिलीवरी" },
   { id: 'medical', emoji: '💊', en: "Medical Store", hi: "मेडिकल स्टोर" },
-  { id: 'salon', emoji: '💇', en: "सैलून ब्यूटी", hi: "सैलून ब्यूटी" },
+  { id: 'salon', emoji: '💇', en: "Salon Beauty", hi: "सैलून ब्यूटी" },
   { id: 'other', emoji: '📦', en: "Other Business", hi: "अन्य व्यापार" },
 ];
 

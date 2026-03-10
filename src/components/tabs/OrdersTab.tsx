@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, CheckCircle2, Clock, Phone, History, ClipboardList, Check, Wallet } from "lucide-react";
+import { MessageCircle, CheckCircle2, History, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -37,9 +37,6 @@ export default function OrdersTab({ language, isService, jobs, sales, onUpdateJo
     "hi-IN": { 
       title: isService ? "ऑर्डर और काम" : "बिक्री का इतिहास", 
       empty: "कोई रिकॉर्ड नहीं मिला", 
-      statusReady: "तैयार", 
-      statusDelivered: "दे दिया", 
-      statusReceived: "आया", 
       notify: "बताओ",
       start: "शुरू करें",
       markReady: "तैयार मार्क करें",
@@ -51,9 +48,6 @@ export default function OrdersTab({ language, isService, jobs, sales, onUpdateJo
     "en-IN": { 
       title: isService ? "Orders & Jobs" : "Sales History", 
       empty: "No records found", 
-      statusReady: "Ready", 
-      statusDelivered: "Delivered", 
-      statusReceived: "Received", 
       notify: "Notify",
       start: "Start Work",
       markReady: "Mark Ready",

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, Lock, BookOpen, Eye, EyeOff, MessageCircle, X, Sparkles, ShieldAlert, Settings, ClipboardList, Bell } from "lucide-react";
+import { Home, Package, BarChart3, Lock, Eye, EyeOff, MessageCircle, X, Sparkles, ShieldAlert, Settings, History } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
 import ReportTab from "./tabs/ReportTab";
@@ -283,8 +283,8 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
   const bizInfo = BUSINESS_TYPES.find(b => b.id === profile?.businessType) || BUSINESS_TYPES[0];
 
   const texts = {
-    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", boliye: "बोलिए", khata: "खाता", report: "रिपोर्ट", activity: "इतिहास", share: "WhatsApp पर भेजें", tagline: "बोलकर चलाओ AI से कारोबार" },
-    "en-IN": { dukaan: "Dukaan", stock: "Stock", boliye: "Boliye", khata: "Khata", report: "Report", activity: "History", share: "Share on WhatsApp", tagline: "Bolkar Chalao AI Se Karobaar" }
+    "hi-IN": { dukaan: "दुकान", stock: "स्टॉक", boliye: "बोलिए", khata: "खाता", report: "रिपोर्ट", history: "इतिहास", share: "WhatsApp पर भेजें", tagline: "बोलकर चलाओ AI से कारोबार" },
+    "en-IN": { dukaan: "Dukaan", stock: "Stock", boliye: "Boliye", khata: "Khata", report: "Report", history: "History", share: "Share on WhatsApp", tagline: "Bolkar Chalao AI Se Karobaar" }
   }[language];
 
   return (
@@ -337,7 +337,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
           <TabsContent value="stock" className="m-0 p-4 pb-12">
             <StockTab role={role} language={language} stock={stock} onAddCategory={(cat) => setStock([...stock, cat])} sales={sales} profile={profile} />
           </TabsContent>
-          <TabsContent value="activity" className="m-0 p-4 pb-12">
+          <TabsContent value="history" className="m-0 p-4 pb-12">
             <OrdersTab 
               language={language} 
               isService={bizInfo.isService} 
@@ -396,7 +396,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
             <span className="text-[11px] font-black uppercase tracking-tight text-[#38BDF8] mt-1">{texts.boliye}</span>
           </div>
 
-          <NavBtn icon={<ClipboardList size={26} />} label={texts.activity} active={activeTab === 'activity'} onClick={() => setActiveTab('activity')} />
+          <NavBtn icon={<History size={26} />} label={texts.history} active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
 
           {!isHelper && (
             <NavBtn icon={<BarChart3 size={26} />} label={texts.report} active={activeTab === 'report'} onClick={() => setActiveTab('report')} />

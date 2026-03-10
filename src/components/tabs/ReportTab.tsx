@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Eye, Share2, Download, TrendingUp, MinusCircle, Users, Star, Calendar, MessageCircle, Bell, CheckCircle2, X } from "lucide-react";
+import { TrendingUp, Calendar, MessageCircle, Bell, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, isSameDay, parseISO } from "date-fns";
 
@@ -75,32 +75,24 @@ export default function ReportTab({ language, privateMode, sales, expenses, prof
 
   const texts = {
     "hi-IN": {
-      title: "व्यापार रिपोर्ट",
+      title: "रिपोर्ट",
       revenue: "आज की कुल बिक्री",
-      expenses: "आज के खर्चे", 
       profit: "आज का मुनाफा", 
-      insights: "AI एनालिसिस",
       customers: "खास ग्राहक", 
-      whatsapp: "शेयर ट्रेंड्स", 
       reveal: "देखें", 
       hide: "छिपाएं",
-      remind: "रिमाइंडर",
       reminderTitle: "आज के रिमाइंडर", 
       noReminders: "आज कोई काम नहीं है",
       ownerTask: "मेरा काम",
       visited: "बार आए"
     },
     "en-IN": {
-      title: "Business Reports",
+      title: "Report",
       revenue: "TODAY'S REVENUE",
-      expenses: "TODAY'S EXPENSES", 
       profit: "NET PROFIT", 
-      insights: "AI BUSINESS INSIGHTS",
       customers: "TOP CUSTOMERS", 
-      whatsapp: "Share Trends", 
       reveal: "Reveal", 
       hide: "Hide",
-      remind: "Remind",
       reminderTitle: "Today's Reminders", 
       noReminders: "No reminders for today",
       ownerTask: "Owner Task",
