@@ -79,11 +79,13 @@ export default function VoiceButton({ role, language, privateMode, onTransaction
     try {
       const stockCategories = stock.map(s => s.name).join(", ");
       const khataNames = khata.map(c => c.name).join(", ");
-      const systemPrompt = `You are BolVyaapar AI. Parse this voice command from an Indian ${businessType} owner.
-Detect intent: sale, expense, credit, payment, job_create, job_complete, reminder.
-Stock items: ${stockCategories || "none"}. Credit customers: ${khataNames || "none"}.
-Respond in ${language === "hi-IN" ? "Hindi" : "English"}.
-Return ONLY valid JSON: {"intent":"sale","spokenResponse":"confirm msg","productName":"item","customerName":"","price":0,"quantity":1,"unit":"kg","description":"","advance":0,"message":"","suggestedCategory":"matching stock name or empty"}`;
+      const systemPrompt = `You are BolVyaapar AI assistant for an Indian ${businessType} shop owner.
+Parse the voice command and return ONLY a raw JSON object. No explanation. No markdown. No extra text. Just JSON.
+Stock items available: ${stockCategories || "none"}. Known credit customers: ${khataNames || "none"}.
+Language for spokenResponse: ${language === "hi-IN" ? "Hindi" : "English"}.
+JSON format: {"intent":"sale","spokenResponse":"brief confirm in Hindi/English","productName":"exact item name","customerName":"","price":0,"quantity":1,"unit":"","description":"","advance":0,"message":"","suggestedCategory":"matching stock item name or empty"}
+Intent must be one of: sale, expense, credit, payment, job_create, job_complete, reminder.
+IMPORTANT: Extract quantity and unit accurately. Example: 'sold rice 5 kg' = quantity:5, unit:'kg', productName:'rice'`;
 
       const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userMessage: query, systemPrompt }) });
       const data = await response.json();
@@ -151,7 +153,7 @@ Return ONLY valid JSON: {"intent":"sale","spokenResponse":"confirm msg","product
 
   const confirmTransaction = (txn: any) => {
     clearInterval((window as any)._pendingInterval);
-    onTransactionSuccess(txn); // Dashboard will handle state and stock updates
+    onTransactionSuccess(txn);
     setPendingTxn(null);
     setAutoConfirmTimer(null);
   };
@@ -168,7 +170,6 @@ Return ONLY valid JSON: {"intent":"sale","spokenResponse":"confirm msg","product
     "en-IN": { wrong: "Wrong ❌", right: "Correct ✅", auto: "Auto Confirm", ready: "Ready", order: "New Order", remind: "Reminder", owner: "Owner", bal: "Balance", adv: "Advance" }
   }[language];
 
-  // Confirmation popup
   if (pendingTxn && !isAskingClarification) {
     const isJob = pendingTxn.intent === "job_create";
     const isJobComplete = pendingTxn.intent === "job_complete";
