@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Store, User, Phone, Users, ShieldCheck, ShoppingBasket, HelpCircle, Volume2 } from "lucide-react";
+import { Store, User, Phone, ShoppingBasket, Volume2 } from "lucide-react";
 
 interface SettingsTabProps {
   language: "hi-IN" | "en-IN";
@@ -27,7 +27,13 @@ const BUSINESS_TYPES = [
 ];
 
 export default function SettingsTab({ language, profile, onUpdateProfile }: SettingsTabProps) {
-  const [formData, setFormData] = useState(profile || { shopName: "", businessType: "kirana", ownerName: "", ownerPhone: "", supplierName: "", supplierPhone: "", helperName: "", familyPhone: "" });
+  const [formData, setFormData] = useState(profile || { 
+    shopName: "", 
+    businessType: "kirana", 
+    ownerName: "", 
+    ownerPhone: "", 
+    supplierPhone: "" 
+  });
   const { toast } = useToast();
 
   const handleHelp = () => {
@@ -42,13 +48,13 @@ export default function SettingsTab({ language, profile, onUpdateProfile }: Sett
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateProfile(formData);
-    localStorage.setItem("bolvyapar_profile", JSON.stringify(formData));
+    localStorage.setItem("bolvyaapar_profile", JSON.stringify(formData));
     toast({ title: language === 'hi-IN' ? "अपडेट हो गया!" : "Profile Updated!" });
   };
 
   const texts = {
-    "hi-IN": { title: "सेटिंग्स", help: "मदद सुनें", save: "अपडेट करें", shop: "दुकान का नाम", owner: "मालिक WhatsApp" },
-    "en-IN": { title: "Settings", help: "Listen to Help", save: "Update Profile", shop: "Shop Name", owner: "Owner WhatsApp" }
+    "hi-IN": { title: "सेटिंग्स", help: "मदद सुनें", save: "अपडेट करें", shop: "दुकान का नाम", owner: "मालिक का नाम", ownerWA: "मालिक WhatsApp", supplierWA: "सप्लायर WhatsApp" },
+    "en-IN": { title: "Settings", help: "Listen to Help", save: "Update Profile", shop: "Shop Name", owner: "Owner Name", ownerWA: "Owner WhatsApp", supplierWA: "Supplier WhatsApp" }
   }[language];
 
   return (
@@ -85,25 +91,19 @@ export default function SettingsTab({ language, profile, onUpdateProfile }: Sett
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><User size={14} /> Name</Label>
-                  <Input required className="bg-slate-50 h-14 rounded-2xl font-bold" value={formData.ownerName} onChange={e => setFormData({...formData, ownerName: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Phone size={14} /> WA</Label>
-                  <Input required className="bg-slate-50 h-14 rounded-2xl font-bold" value={formData.ownerPhone} onChange={e => setFormData({...formData, ownerPhone: e.target.value})} />
-                </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><User size={14} /> {texts.owner}</Label>
+                <Input required className="bg-slate-50 h-14 rounded-2xl font-bold" value={formData.ownerName} onChange={e => setFormData({...formData, ownerName: e.target.value})} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Users size={14} /> Supplier</Label>
-                  <Input className="bg-slate-50 h-14 rounded-2xl font-bold" value={formData.supplierPhone} onChange={e => setFormData({...formData, supplierPhone: e.target.value})} />
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Phone size={14} /> {texts.ownerWA}</Label>
+                  <Input required className="bg-slate-50 h-14 rounded-2xl font-bold" placeholder="91..." value={formData.ownerPhone} onChange={e => setFormData({...formData, ownerPhone: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Phone size={14} /> Family</Label>
-                  <Input className="bg-slate-50 h-14 rounded-2xl font-bold" value={formData.familyPhone} onChange={e => setFormData({...formData, familyPhone: e.target.value})} />
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Phone size={14} /> {texts.supplierWA}</Label>
+                  <Input className="bg-slate-50 h-14 rounded-2xl font-bold" placeholder="91..." value={formData.supplierPhone} onChange={e => setFormData({...formData, supplierPhone: e.target.value})} />
                 </div>
               </div>
             </div>
