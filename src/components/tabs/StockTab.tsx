@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -52,36 +53,74 @@ export default function StockTab({ role, language, stock, onAddCategory, sales, 
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleVoiceAdd = async (query: string) => {
-    if (isHelper) return;
-    setIsProcessing(true);
-    try {
-      const systemPrompt = `Parse voice to create a new stock category. 
-      Return ONLY JSON: {"name": "item name", "hiName": "Hindi name", "qty": number, "unit": "kg/L/units", "price": number, "emoji": "emoji"}`;
-      
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userMessage: query, systemPrompt }),
-      });
+  const parseStockLocally = (text: string) => {
+    const qtyMatch = text.match(/(\d+(\.\d+)?)/);
+    const qty = qtyMatch ? parseFloat(qtyMatch[1]) : 1;
+    
+    const unitsMap: Record<string, string[]> = {
+      kg: ['kg', 'kilo', 'किलो'],
+      L: ['litre', 'liter', 'लीटर', 'l'],
+      units: ['piece', 'pcs', 'पीस', 'packet', 'पैकेट', 'unit', 'यूनिट', 'bottle', 'बोतल', 'tablet'],
+      m: ['meter', 'मीटर'],
+      gm: ['gram', 'ग्राम', 'gm']
+    };
 
-      const data = await response.json();
-      const jsonMatch = data.reply?.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        setTempResult(parsed);
-        speak(language === 'hi-IN' ? "क्या मैं इसे जोड़ दूँ?" : "Should I add this?");
+    let unit = language === 'hi-IN' ? 'यूनिट' : 'units';
+    for (const [key, aliases] of Object.entries(unitsMap)) {
+      if (aliases.some(a => text.toLowerCase().includes(a))) {
+        unit = key === 'units' && language === 'hi-IN' ? 'यूनिट' : key;
+        break;
       }
-    } catch (e) {
-      console.error(e);
-      speak(language === 'hi-IN' ? "समझ नहीं आया, फिर से बोलें" : "Didn't catch that, try again");
-    } finally {
-      setIsProcessing(false);
     }
+
+    let cleanName = text.replace(/(\d+(\.\d+)?)/, '').trim();
+    Object.values(unitsMap).flat().forEach(u => {
+      const reg = new RegExp(`\\b${u}\\b`, 'gi');
+      cleanName = cleanName.replace(reg, '');
+    });
+    
+    cleanName = cleanName
+      .replace(/mera|mere|paas|hai|है|I have|add|जोड़ो|सहेजें/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const name = cleanName || text;
+
+    return {
+      name: name,
+      hiName: name,
+      qty: qty,
+      unit: unit,
+      price: 0,
+      emoji: name.toLowerCase().includes('milk') ? '🥛' : 
+             name.toLowerCase().includes('rice') ? '🌾' : 
+             name.toLowerCase().includes('oil') ? '🛢️' : '📦'
+    };
+  };
+
+  const handleVoiceAdd = (query: string) => {
+    if (isHelper) return;
+    
+    const parsed = parseStockLocally(query);
+    setTempResult(parsed);
+    
+    // Automatic confirmation after a brief delay
+    setTimeout(() => {
+      onAddCategory({
+        ...parsed,
+        id: Date.now(),
+        level: 100,
+        maxQty: parsed.qty,
+        lowStockLevel: parsed.qty * 0.2
+      });
+      setTempResult(null);
+      setIsDialogOpen(false);
+      speak(language === 'hi-IN' ? `${parsed.name} जोड़ दिया गया है` : `${parsed.name} added successfully`);
+    }, 1500);
   };
 
   const confirmAdd = () => {
-    if (isHelper) return;
+    if (!tempResult || isHelper) return;
     onAddCategory({
       ...tempResult,
       id: Date.now(),
@@ -152,7 +191,7 @@ export default function StockTab({ role, language, stock, onAddCategory, sales, 
     }[profile?.businessType as keyof typeof term] || term.other;
 
     const itemName = language === 'hi-IN' ? (item.hiName || item.name) : item.name;
-    const shopName = profile?.shopName || "BolVyapar Shop";
+    const shopName = profile?.shopName || "BolVyaapar Shop";
     
     const message = language === 'hi-IN'
       ? `नमस्ते, मैं ${shopName} से बोल रहा हूँ। हमें ${itemName} के ${suggestedQty} ${item.unit} ${term} की ज़रूरत है। कृपया जल्दी भेज दें। धन्यवाद!`
@@ -165,8 +204,8 @@ export default function StockTab({ role, language, stock, onAddCategory, sales, 
     "hi-IN": {
       title: "इन्वेंट्री स्टेटस",
       addBtn: "नया सामान",
-      voiceInstr: "सामान का नाम, मात्रा और कीमत बोलें",
-      example: "जैसे: '10 किलो चावल 800 रुपये'",
+      voiceInstr: "सामान का नाम और मात्रा बोलें",
+      example: "जैसे: '10 किलो चावल'",
       confirm: "हाँ, जोड़ो",
       cancel: "हटाओ",
       processing: "चेक कर रहा हूँ...",
@@ -177,8 +216,8 @@ export default function StockTab({ role, language, stock, onAddCategory, sales, 
     "en-IN": {
       title: "Stock Status",
       addBtn: "Add Item",
-      voiceInstr: "Speak item name, quantity and price",
-      example: "e.g. '10kg Rice for 800 rupees'",
+      voiceInstr: "Speak item name and quantity",
+      example: "e.g. '10kg Rice'",
       confirm: "Yes, Add",
       cancel: "Cancel",
       processing: "Processing...",
@@ -228,21 +267,16 @@ export default function StockTab({ role, language, stock, onAddCategory, sales, 
                     <p className="text-white/40 text-sm italic">{texts.example}</p>
                   </>
                 ) : (
-                  <>
-                    <div className="text-7xl mb-2">{tempResult.emoji}</div>
+                  <div className="bg-emerald-500/10 border-2 border-emerald-500/40 p-8 rounded-[40px] w-full animate-in zoom-in-95">
+                    <div className="text-7xl mb-4">{tempResult.emoji}</div>
                     <div className="space-y-2">
-                      <h2 className="text-4xl font-black">{language === 'hi-IN' ? tempResult.hiName : tempResult.name}</h2>
-                      <p className="text-2xl font-bold text-[#FFB300]">{tempResult.qty} {tempResult.unit} • ₹{tempResult.price}</p>
+                      <p className="text-emerald-400 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                        <CheckCircle2 size={14} /> Saved Automatically
+                      </p>
+                      <h2 className="text-4xl font-black text-white">{language === 'hi-IN' ? tempResult.hiName : tempResult.name}</h2>
+                      <p className="text-2xl font-bold text-white/80">{tempResult.qty} {tempResult.unit}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 w-full pt-4">
-                      <Button onClick={() => setTempResult(null)} variant="outline" className="h-20 rounded-3xl border-white/10 bg-white/5 text-white text-xl font-black">
-                        <X size={24} className="mr-2" /> {texts.cancel}
-                      </Button>
-                      <Button onClick={confirmAdd} className="h-20 rounded-3xl bg-emerald-500 text-white text-xl font-black hover:bg-emerald-600 shadow-xl shadow-emerald-500/20">
-                        <CheckCircle2 size={24} className="mr-2" /> {texts.confirm}
-                      </Button>
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
             </DialogContent>
@@ -285,7 +319,7 @@ export default function StockTab({ role, language, stock, onAddCategory, sales, 
                     </div>
                   </div>
 
-                  {!isHelper && (
+                  {!isHelper && item.price > 0 && (
                     <div className="text-xl font-black text-slate-300">
                       ₹{item.price}
                     </div>
@@ -336,3 +370,4 @@ export default function StockTab({ role, language, stock, onAddCategory, sales, 
     </div>
   );
 }
+
