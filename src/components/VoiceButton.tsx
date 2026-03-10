@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, Loader2, X, Check } from "lucide-react";
+import { Mic, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MAPPINGS_KEY = "bolvyaapar_product_mappings";
@@ -20,7 +20,7 @@ interface VoiceButtonProps {
 export default function VoiceButton({ role, language, privateMode, onTransactionSuccess, businessType = "kirana", stock = [], khata = [], compact }: VoiceButtonProps) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [learnedMappings, setLearnedMappings] = useState<Record<string, { category: string, count: number }>>({});
+  const [learnedMappings, setLearnedMappings] = useState<Record<string, { category: string; count: number }>>({});
   const [pendingTxn, setPendingTxn] = useState<any>(null);
   const [autoConfirmTimer, setAutoConfirmTimer] = useState<number | null>(null);
   const [isAskingClarification, setIsAskingClarification] = useState(false);
@@ -33,20 +33,22 @@ export default function VoiceButton({ role, language, privateMode, onTransaction
     const saved = localStorage.getItem(MAPPINGS_KEY);
     if (saved) try { setLearnedMappings(JSON.parse(saved)); } catch (e) { console.error(e); }
 
-    if (typeof window !== "undefined") {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.lang = language;
-        recognition.onresult = (e: any) => {
-          const query = e.results[0][0].transcript;
-          if (isAskingClarification) handleClarificationResponse(query);
-          else processQuery(query);
-        };
-        recognition.onend = () => setIsListening(false);
-        recognitionRef.current = recognition;
-      }
-    }
+    if (typeof window === "undefined") return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = language;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (e: any) => {
+      const query = e.results[0][0].transcript;
+      if (isAskingClarification) handleClarificationResponse(query);
+      else processQuery(query);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
   }, [language, isAskingClarification]);
 
   const speak = (text: string) => {
@@ -61,7 +63,7 @@ export default function VoiceButton({ role, language, privateMode, onTransaction
     if (isListening || isProcessing) return;
     if (!isAskingClarification) speak(language === "hi-IN" ? "बोलिए" : "Speak now");
     setIsListening(true);
-    recognitionRef.current?.start();
+    try { recognitionRef.current?.start(); } catch (e) { setIsListening(false); }
   };
 
   const processQuery = async (query: string) => {
@@ -69,7 +71,7 @@ export default function VoiceButton({ role, language, privateMode, onTransaction
     setIsProcessing(true);
 
     if (!navigator.onLine) {
-      finalizeTransaction({ spokenResponse: language === "hi-IN" ? "ऑफलाइन सहेजा गया" : "Saved Offline", productName: query, price: 0, intent: 'sale' });
+      finalizeTransaction({ spokenResponse: language === "hi-IN" ? "ऑफलाइन सहेजा गया" : "Saved Offline", productName: query, price: 0, quantity: 1, intent: "sale" });
       setIsProcessing(false);
       return;
     }
@@ -77,37 +79,33 @@ export default function VoiceButton({ role, language, privateMode, onTransaction
     try {
       const stockCategories = stock.map(s => s.name).join(", ");
       const khataNames = khata.map(c => c.name).join(", ");
-      const systemPrompt = `You are BolVyaapar AI. Parse voice. 
-Intents: 
-1. sale (Retail sale)
-2. expense (Business kharcha)
-3. credit (Udhaar dena)
-4. payment (Udhaar vapas lena)
-5. job_create (Service job)
-6. job_complete (Mark job ready)
-7. reminder (Set reminder for owner/customer)
-
-Context: ${businessType}. Stock: ${stockCategories}. Khata: ${khataNames}. 
-Return ONLY JSON: {"intent": "...", "spokenResponse": "...", "productName": "...", "customerName": "...", "price": 0, "quantity": 0, "unit": "...", "description": "...", "advance": 0, "message": "...", "date": "..."}`;
+      const systemPrompt = `You are BolVyaapar AI. Parse this voice command from an Indian ${businessType} owner.
+Detect intent: sale, expense, credit, payment, job_create, job_complete, reminder.
+Stock items: ${stockCategories || "none"}. Credit customers: ${khataNames || "none"}.
+Respond in ${language === "hi-IN" ? "Hindi" : "English"}.
+Return ONLY valid JSON: {"intent":"sale","spokenResponse":"confirm msg","productName":"item","customerName":"","price":0,"quantity":1,"unit":"kg","description":"","advance":0,"message":"","suggestedCategory":"matching stock name or empty"}`;
 
       const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userMessage: query, systemPrompt }) });
       const data = await response.json();
       const jsonMatch = data.reply?.match(/\{[\s\S]*\}/);
-      if (jsonMatch) handleTransactionResult(JSON.parse(jsonMatch[0]));
+      if (jsonMatch) {
+        handleTransactionResult(JSON.parse(jsonMatch[0]));
+      } else {
+        finalizeTransaction({ spokenResponse: language === "hi-IN" ? "बिक्री दर्ज हो गई" : "Sale recorded", productName: query, price: 0, quantity: 1, intent: "sale" });
+      }
     } catch (err) {
-      speak(language === 'hi-IN' ? "गड़बड़ हो गई" : "Something went wrong");
+      speak(language === "hi-IN" ? "गड़बड़ हो गई, फिर कोशिश करें" : "Something went wrong, try again");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleTransactionResult = (txn: any) => {
-    if (isHelper && !['sale'].includes(txn.intent)) {
+    if (isHelper && txn.intent !== "sale") {
       speak(language === "hi-IN" ? "सिर्फ बिक्री की अनुमति है।" : "Sales only allowed.");
       return;
     }
-    
-    if (txn.intent === 'sale') {
+    if (txn.intent === "sale") {
       const mapping = learnedMappings[txn.productName?.toLowerCase()];
       if (mapping?.count >= 3) {
         txn.matchedCategory = mapping.category;
@@ -115,12 +113,11 @@ Return ONLY JSON: {"intent": "...", "spokenResponse": "...", "productName": "...
         setPendingTxn(txn);
         setSuggestedCategory(txn.suggestedCategory);
         setIsAskingClarification(true);
-        speak(language === "hi-IN" ? `${txn.productName} ${txn.suggestedCategory} में है?` : `Is ${txn.productName} in ${txn.suggestedCategory}?`);
+        speak(language === "hi-IN" ? `${txn.productName} ${txn.suggestedCategory} में से गया?` : `Is ${txn.productName} from ${txn.suggestedCategory}?`);
         setTimeout(() => startListening(), 800);
         return;
       }
     }
-
     finalizeTransaction(txn);
   };
 
@@ -136,11 +133,12 @@ Return ONLY JSON: {"intent": "...", "spokenResponse": "...", "productName": "...
     }
     finalizeTransaction(pendingTxn);
     setIsAskingClarification(false);
+    setPendingTxn(null);
   };
 
   const finalizeTransaction = (txn: any) => {
     setPendingTxn(txn);
-    if (navigator.onLine) speak(txn.spokenResponse);
+    if (navigator.onLine && txn?.spokenResponse) speak(txn.spokenResponse);
     let timeLeft = 5;
     setAutoConfirmTimer(timeLeft);
     const interval = setInterval(() => {
@@ -153,65 +151,64 @@ Return ONLY JSON: {"intent": "...", "spokenResponse": "...", "productName": "...
 
   const confirmTransaction = (txn: any) => {
     clearInterval((window as any)._pendingInterval);
-    onTransactionSuccess(txn);
+    onTransactionSuccess(txn); // Dashboard will handle state and stock updates
     setPendingTxn(null);
     setAutoConfirmTimer(null);
   };
 
+  const cancelTransaction = () => {
+    clearInterval((window as any)._pendingInterval);
+    setPendingTxn(null);
+    setAutoConfirmTimer(null);
+    speak(language === "hi-IN" ? "रद्द कर दिया" : "Cancelled");
+  };
+
   const texts = {
-    "hi-IN": { wrong: "गलत", right: "सही है", auto: "ऑटो कन्फर्म", ready: "तैयार", order: "नया ऑर्डर", remind: "रिमाइंडर", owner: "मालिक", bal: "बाकी", adv: "एडवांस" },
-    "en-IN": { wrong: "Galat", right: "Sahi Hai", auto: "Auto Confirm", ready: "Ready", order: "New Order", remind: "Reminder", owner: "Owner", bal: "Balance", adv: "Advance" }
+    "hi-IN": { wrong: "गलत ❌", right: "सही है ✅", auto: "ऑटो कन्फर्म", ready: "तैयार", order: "नया ऑर्डर", remind: "रिमाइंडर", owner: "मालिक", bal: "बाकी", adv: "एडवांस" },
+    "en-IN": { wrong: "Wrong ❌", right: "Correct ✅", auto: "Auto Confirm", ready: "Ready", order: "New Order", remind: "Reminder", owner: "Owner", bal: "Balance", adv: "Advance" }
   }[language];
 
+  // Confirmation popup
   if (pendingTxn && !isAskingClarification) {
-    const isJob = pendingTxn.intent === 'job_create';
-    const isJobComplete = pendingTxn.intent === 'job_complete';
-    const isReminder = pendingTxn.intent === 'reminder';
+    const isJob = pendingTxn.intent === "job_create";
+    const isJobComplete = pendingTxn.intent === "job_complete";
+    const isReminder = pendingTxn.intent === "reminder";
     const isAdvance = (pendingTxn.advance || 0) > 0;
-    
+
     return (
-      <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-sm flex items-center justify-center p-6">
-        <div className="bg-white w-full max-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95">
-          <div className="p-8 space-y-8">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="h-28 w-28 rounded-full bg-slate-50 flex items-center justify-center text-6xl">
-                {isJob ? '🛠️' : isJobComplete ? '✅' : isReminder ? '🔔' : '🛍️'}
+      <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-end justify-center p-4">
+        <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
+          <div className="p-8 space-y-6">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="h-24 w-24 rounded-full bg-slate-50 flex items-center justify-center text-5xl">
+                {isJob ? "🛠️" : isJobComplete ? "✅" : isReminder ? "🔔" : "🛍️"}
               </div>
               <div>
                 <h2 className="text-3xl font-black text-[#0D2240] uppercase tracking-tight">
                   {isJobComplete ? pendingTxn.customerName : isReminder ? (pendingTxn.customerName || texts.owner) : (pendingTxn.productName || pendingTxn.customerName)}
                 </h2>
-                <p className="text-xl font-black text-slate-400 mt-2">
-                  {isJobComplete ? texts.ready : 
-                   isJob ? texts.order : 
-                   isReminder ? texts.remind :
-                   `${pendingTxn.quantity || ''} ${pendingTxn.unit || ''}`}
+                <p className="text-lg font-black text-slate-400 mt-1">
+                  {isJobComplete ? texts.ready : isJob ? texts.order : isReminder ? texts.remind : `${pendingTxn.quantity || ""} ${pendingTxn.unit || ""}`}
                 </p>
                 {isReminder && <p className="text-sm font-bold text-slate-500 mt-2 italic">"{pendingTxn.message}"</p>}
               </div>
             </div>
-            {!isHelper && !isJobComplete && !isReminder && (pendingTxn.price > 0 || isAdvance) && (
-              <div className="space-y-2 text-center">
-                {isJob && isAdvance && (
-                  <p className="text-emerald-600 font-bold uppercase text-[10px] tracking-widest">
-                    {texts.adv}: ₹{pendingTxn.advance}
-                  </p>
-                )}
-                <div className="text-5xl font-black text-secondary">
-                  ₹{isJob ? (pendingTxn.price - (pendingTxn.advance || 0)) : pendingTxn.price}
+
+            {!isHelper && !isJobComplete && !isReminder && pendingTxn.price > 0 && (
+              <div className="text-center">
+                {isJob && isAdvance && <p className="text-emerald-600 font-bold uppercase text-[10px] tracking-widest mb-1">{texts.adv}: ₹{pendingTxn.advance}</p>}
+                <div className="text-5xl font-black text-[#C45000]">
+                  ₹{isJob ? pendingTxn.price - (pendingTxn.advance || 0) : pendingTxn.price}
                   {isJob && <span className="text-sm ml-2 text-slate-400 uppercase">{texts.bal}</span>}
                 </div>
               </div>
             )}
+
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setPendingTxn(null)} className="h-20 rounded-[28px] bg-red-50 text-red-600 font-black text-lg uppercase border-2 border-red-100 flex flex-col items-center justify-center">
-                <span>{texts.wrong}</span>
-              </button>
-              <button onClick={() => confirmTransaction(pendingTxn)} className="h-20 rounded-[28px] bg-secondary text-white font-black text-lg uppercase shadow-xl flex flex-col items-center justify-center">
-                <span>{texts.right}</span>
-              </button>
+              <button onClick={cancelTransaction} className="h-20 rounded-[28px] bg-red-50 text-red-600 font-black text-lg border-2 border-red-100 flex items-center justify-center">{texts.wrong}</button>
+              <button onClick={() => confirmTransaction(pendingTxn)} className="h-20 rounded-[28px] bg-[#1A6B3C] text-white font-black text-lg shadow-xl flex items-center justify-center">{texts.right}</button>
             </div>
-            <div className="text-center text-[11px] font-black text-slate-300 uppercase tracking-widest">{texts.auto} in {autoConfirmTimer}s</div>
+            <p className="text-center text-[11px] font-black text-slate-300 uppercase tracking-widest">{texts.auto} {autoConfirmTimer}s</p>
           </div>
         </div>
       </div>
@@ -220,22 +217,23 @@ Return ONLY JSON: {"intent": "...", "spokenResponse": "...", "productName": "...
 
   return (
     <div className="flex flex-col items-center">
-      <button 
-        onClick={startListening} 
-        disabled={isProcessing} 
+      <button
+        onClick={startListening}
+        disabled={isProcessing}
         className={cn(
-          "rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(56,189,248,0.4)] transition-all active:scale-90 border-4 border-white", 
-          compact ? "h-14 w-14" : "h-24 w-24",
-          isListening ? "bg-red-500 animate-pulse" : "bg-[#38BDF8]", 
-          isProcessing && "bg-slate-400"
+          "rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(56,189,248,0.4)] transition-all active:scale-90 border-4 border-white",
+          compact ? "h-12 w-12" : "h-24 w-24",
+          isListening ? "bg-red-500 animate-pulse" : "bg-[#38BDF8]",
+          isProcessing && "bg-slate-400 cursor-wait"
         )}
       >
-        {isProcessing ? (
-          <Loader2 className="text-white animate-spin" size={compact ? 24 : 40} />
-        ) : (
-          <Mic className="text-white" size={compact ? 26 : 40} />
-        )}
+        {isProcessing ? <Loader2 className="text-white animate-spin" size={compact ? 20 : 40} /> : <Mic className="text-white" size={compact ? 22 : 40} />}
       </button>
+      {isListening && (
+        <p className="mt-1 text-[10px] font-black text-[#38BDF8] uppercase tracking-widest animate-pulse">
+          {language === "hi-IN" ? "सुन रहा हूँ..." : "Listening..."}
+        </p>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Home, Package, BarChart3, Lock, Eye, EyeOff, MessageCircle, X, Sparkles, ShieldAlert, Settings, History } from "lucide-react";
+import { Home, Package, BarChart3, Lock, Eye, EyeOff, MessageCircle, X, ShieldAlert, Settings, History } from "lucide-react";
 import DukaanTab from "./tabs/DukaanTab";
 import StockTab from "./tabs/StockTab";
 import ReportTab from "./tabs/ReportTab";
@@ -224,22 +224,49 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
       return;
     }
 
-    const newSale = { id: Date.now(), timestamp, item: details.productName || "Unknown Item", qty: details.quantity ? `${details.quantity} ${details.unit || ''}` : "---", customer: details.customerName || (language === 'hi-IN' ? 'ग्राहक' : 'Customer'), amount: details.price || 0 };
+    // Default: SALE
+    const newSale = { 
+      id: Date.now(), 
+      timestamp, 
+      item: details.productName || "Unknown Item", 
+      qty: details.quantity ? `${details.quantity} ${details.unit || ''}` : "---", 
+      customer: details.customerName || (language === 'hi-IN' ? 'ग्राहक' : 'Customer'), 
+      amount: details.price || 0 
+    };
     const updatedSales = [newSale, ...sales];
     setSales(updatedSales);
     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updatedSales));
 
+    // STOCK REDUCTION LOGIC
     const soldQty = Number(details.quantity) || 0;
-    const prodName = (details.productName || "").toLowerCase();
+    const productSpoken = (details.productName || "").toLowerCase();
+    
     const updatedStock = stock.map(item => {
+      const itemName = (item.name || "").toLowerCase();
+      const itemHiName = (item.hiName || "").toLowerCase();
+      
       let isMatch = false;
-      if (prodName.includes(item.name.toLowerCase()) || prodName.includes((item.hiName || "").toLowerCase()) || details.matchedCategory === item.name) isMatch = true;
+      // 1. Direct category match from AI mapping
+      if (details.matchedCategory === item.name) {
+        isMatch = true;
+      } 
+      // 2. Name contains spoken word or vice-versa
+      else if (productSpoken && itemName && (itemName.includes(productSpoken) || productSpoken.includes(itemName))) {
+        isMatch = true;
+      } 
+      // 3. Hindi Name matching
+      else if (productSpoken && itemHiName && (itemHiName.includes(productSpoken) || productSpoken.includes(itemHiName))) {
+        isMatch = true;
+      }
+      
       if (isMatch) {
-        const newQty = Math.max(0, item.qty - soldQty);
-        return { ...item, qty: newQty, level: (newQty / (item.maxQty || 100)) * 100 };
+        const newQty = Math.max(0, (item.qty || 0) - soldQty);
+        const level = item.maxQty > 0 ? Math.round((newQty / item.maxQty) * 100) : 0;
+        return { ...item, qty: newQty, level };
       }
       return item;
     });
+    
     setStock(updatedStock);
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(updatedStock));
   };
@@ -393,7 +420,7 @@ export default function Dashboard({ role, language, onLogout }: DashboardProps) 
           
           <div className="relative flex flex-col items-center">
             <VoiceButton role={role} language={language} privateMode={privateMode} onTransactionSuccess={handleTransaction} businessType={profile?.businessType} stock={stock} khata={creditKhata} compact />
-            <span className="text-[11px] font-black uppercase tracking-tight text-[#38BDF8] mt-1">{texts.boliye}</span>
+            <span className="text-[11px] font-black uppercase tracking-tight text-[#38BDF8]">{texts.boliye}</span>
           </div>
 
           <NavBtn icon={<History size={26} />} label={texts.history} active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
